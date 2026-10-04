@@ -156,3 +156,18 @@ reasons about, in one continuous run:
 flow first (directly answers the graded request), then layer the critical-path-aware
 change check on top of any `Task.update` the agent proposes, since that's the single
 Nodes & Links feature we can fully replicate today with zero new platform work.
+
+---
+
+## Implementation limits found (evidence-labelled)
+
+- [observed] Overload on live Suryodaya returns empty: `ProjectResourceAllocation.list` and `ProjectResourceProfile.list` both return `total: 0`, and `CalendarEvent.list` is `tool_not_available` for this seat (only `endpoint.calendar.birthdays` exists). The finding therefore stores empty overload sets with `limits.truncated.CalendarEvent=true`. Offline fixtures use `start`/`end`/`hours` + `employee_id` on the allocation; live schema has neither field.
+- [observed] Allocation hours source: hours come from the linked `CalendarEvent.start_at`/`end_at` (type `text`) plus `timezone`. `agent/domain/overload.py` now derives duration from those timestamps when `hours` is absent and splits multi-day blocks evenly.
+- [inferred] Timezone handling: domain compares by calendar date only (`parse_date` drops clock/timezone). Cross-midnight blocks split by day; DST/zone-edge cases untested.
+- [observed] `Task`/`Project` schemas expose no `updated_at`, so `guarded_update` relies on `status` comparison + post-write re-read. `Task.status` vocabulary is type `state` and unenmerated in schemas.
+- [observed] `Milestone` live field is `due_date` (fixtures used `date`); `agent/domain/behind.py` now accepts both. `Task` live field is `title` (fixtures use ids only).
+- [observed] No `project.behind_schedule` / `project.overloaded_next_week` tool exists in `tools/list` (247 tools); grading reads our `AgentMemory` finding row by `run_id` (see `docs/ENTITY_MAP.md` T010a).
+- [observed] T077 live `--apply` walkthrough (Suryodaya, harness-owned `team14-harness-*` project+task only): `guarded_update` moved `due_date` 2027-06-01 -> 2027-06-15, outcome `applied`, post-write re-read matched, `updated_at` IS present on live rows at runtime even though `GET /api/schemas` does not list it. Cleanup attempted (task+project delete); rows are future-dated and marker-named so neither graded predicate can see them (G2). No locked states encountered; `reschedule_jobs` endpoint not present in this seat's catalogue.
+- [observed] T095 live read-only: `endpoint.projects.client_status_report` returns a milestone-grounded payload (`project_name`, `sources[]` with milestone labels/due dates) for a real project. `crm` probes as `unknown_name` (404), so the customer link is skipped silently per spec and never blocks reporting.
+- [observed] T089 live read-only (Suryodaya): Timesheets exist with `hours`/`rate`/`amount`; all 103 projects carry `budget_amount`+`budget_hours`; sampled tasks all carry `budget_hours`+`rate` (41/122 with `logged_hours`). EVM is computable live; `percent_complete` uses done-task budget-hour share per the documented rule.
+- [inferred] Final scope: Phases 1–7 delivered and offline-graded; QSRA-grade risk simulation remains platform-blocked (single-predecessor schema, section 2); baseline snapshots and cross-portfolio rollups need platform work.

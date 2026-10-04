@@ -1,0 +1,17 @@
+{
+  "id": "delay_narrative_grounded",
+  "note": "AI-assisted",
+  "instances": ["suryodaya", "keystone"],
+  "mode": "offline_only",
+  "prompt": "Why did project P-DLY slip?",
+  "fixture": "delay_basic",
+  "script": [
+    {"name": "company_context", "arguments": {}},
+    {"name": "load_snapshot", "arguments": {"scope": "projects"}},
+    {"name": "delay_facts", "arguments": {"project_id": "P-DLY"}},
+    "STOP"
+  ],
+  "final_answer": "Primary blocker T-PRIM (overdue task, 33 days late). Secondary causes: T-SEC1 overdue, T-SEC2 blocked by predecessor T-PRIM, M-DLY missed milestone.",
+  "verifier": "delay_grounded",
+  "checks": "Primary blocker named first, every cited id exists in the project, secondary causes labelled secondary, no outside ids."
+}

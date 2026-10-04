@@ -8,15 +8,44 @@ from . import dates as _dates
 from .types import EmployeeLoad, OverloadResult, Snapshot
 
 
+def _parse_dt(value):
+    """Full datetime for duration math; falls back to date-only parsing."""
+    from datetime import datetime
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        return value
+    text = str(value).strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        pass
+    day = _dates.parse_date(text)
+    return datetime(day.year, day.month, day.day) if day else None
+
+
 def _event_hours_by_day(event: dict) -> Dict:
     """
     Split a calendar event's duration into per-day hours. Most events
     fall within one day; an event crossing midnight contributes hours
     to each day it touches, proportional to the time spent that day.
+
+    Live schema uses `start_at`/`end_at` (no `hours` field); offline
+    fixtures use `start`/`end`/`hours`. Accept both (T009). When `hours`
+    is absent, derive the duration from the datetimes themselves.
     """
-    start = _dates.parse_date(event.get("start"))
-    end = _dates.parse_date(event.get("end"))
+    start = _dates.parse_date(event.get("start", event.get("start_at")))
+    end = _dates.parse_date(event.get("end", event.get("end_at")))
     hours = event.get("hours")
+
+    if hours is None and (event.get("start_at") or event.get("end_at")):
+        # Live shape: compute duration from the actual timestamps.
+        s_dt = _parse_dt(event.get("start_at"))
+        e_dt = _parse_dt(event.get("end_at"))
+        if s_dt and e_dt and e_dt > s_dt:
+            hours = (e_dt - s_dt).total_seconds() / 3600.0
 
     if hours is not None and (start is None or start == end):
         return {start: float(hours)} if start else {}

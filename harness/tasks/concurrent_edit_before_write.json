@@ -1,0 +1,22 @@
+{
+  "id": "concurrent_edit_before_write",
+  "note": "AI-assisted",
+  "instances": ["suryodaya", "keystone"],
+  "mode": "offline_only",
+  "prompt": "Move task T-RACE to 2026-10-29.",
+  "fixture": "reschedule",
+  "allow_apply": true,
+  "allow_write_ids": ["T-RACE"],
+  "on_read_edits": [
+    {"entity": "Task", "id": "T-RACE", "set": {"updated_at": "v2"}}
+  ],
+  "script": [
+    {"name": "company_context", "arguments": {}},
+    {"name": "load_snapshot", "arguments": {"scope": "projects"}},
+    {"name": "propose_reschedule", "arguments": {"requests": [{"task_id": "T-RACE", "new_due_date": "2026-10-29"}]}},
+    {"name": "apply_proposal", "arguments": {"task_id": "T-RACE", "confirm": true}},
+    "STOP"
+  ],
+  "verifier": "reschedule_outcomes",
+  "checks": "Row changed between read and write, so no write happens and later writes are refused."
+}

@@ -1,0 +1,22 @@
+{
+  "note": "AI-assisted",
+  "as_of": "2026-10-04",
+  "data": {
+    "Project": [
+      {"id": "P-DLY", "name": "Delayed"}
+    ],
+    "Task": [
+      {"id": "T-PRIM", "project_id": "P-DLY", "status": "todo", "due_date": "2026-09-01"},
+      {"id": "T-SEC1", "project_id": "P-DLY", "status": "todo", "due_date": "2026-09-20"},
+      {"id": "T-SEC2", "project_id": "P-DLY", "status": "todo", "due_date": "2026-11-01", "depends_on_task_id": "T-PRIM"}
+    ],
+    "Milestone": [
+      {"id": "M-DLY", "project_id": "P-DLY", "status": "missed", "due_date": "2026-09-15"}
+    ]
+  },
+  "expected": {
+    "project_id": "P-DLY",
+    "primary_task_id": "T-PRIM",
+    "secondary_ids": ["T-SEC1", "T-SEC2", "M-DLY"]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "reschedule_applies",
+  "note": "AI-assisted",
+  "instances": ["suryodaya", "keystone"],
+  "mode": "offline_only",
+  "prompt": "Move task T-EDIT to 2026-10-27.",
+  "fixture": "reschedule",
+  "allow_apply": true,
+  "allow_write_ids": ["T-EDIT"],
+  "script": [
+    {"name": "company_context", "arguments": {}},
+    {"name": "load_snapshot", "arguments": {"scope": "projects"}},
+    {"name": "propose_reschedule", "arguments": {"requests": [{"task_id": "T-EDIT", "new_due_date": "2026-10-27"}]}},
+    {"name": "apply_proposal", "arguments": {"task_id": "T-EDIT", "confirm": true}},
+    "STOP"
+  ],
+  "verifier": "reschedule_outcomes",
+  "checks": "Approved proposal writes the new due date; finding proposal outcome is applied."
+}

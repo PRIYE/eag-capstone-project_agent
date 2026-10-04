@@ -1,0 +1,25 @@
+{
+  "note": "AI-assisted",
+  "as_of": "2026-10-04",
+  "data": {
+    "Project": [
+      {"id": "P-STAT", "name": "Harbor Bridge", "budget_amount": 20000}
+    ],
+    "Task": [
+      {"id": "T-S1", "project_id": "P-STAT", "status": "todo", "due_date": "2026-09-05", "budget_hours": 50, "rate": 100},
+      {"id": "T-S2", "project_id": "P-STAT", "status": "todo", "due_date": "2026-11-01", "depends_on_task_id": "T-S1", "budget_hours": 50, "rate": 100}
+    ],
+    "Milestone": [
+      {"id": "M-S1", "project_id": "P-STAT", "status": "missed", "due_date": "2026-09-10"}
+    ],
+    "Timesheet": [
+      {"id": "TS-S1", "project_id": "P-STAT", "task_id": "T-S1", "hours": 20, "rate": 100}
+    ]
+  },
+  "platform_report": {"summary": "Phase 2 delivery at risk", "health": "at_risk"},
+  "expected": {
+    "project_id": "P-STAT",
+    "blocker_ids": ["T-S1", "T-S2", "M-S1"],
+    "primary_id": "T-S1"
+  }
+}

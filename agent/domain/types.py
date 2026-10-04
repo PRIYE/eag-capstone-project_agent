@@ -132,6 +132,8 @@ class CriticalPathDelta:
     task_on_path: bool = False
     platform_cp_before: Optional[Any] = None
     platform_cp_after: Optional[Any] = None
+    checked_task_id: Optional[str] = None
+    new_due_date: Optional[str] = None
 
 
 @dataclass

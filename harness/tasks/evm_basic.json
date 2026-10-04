@@ -1,0 +1,17 @@
+{
+  "id": "evm_basic",
+  "note": "AI-assisted",
+  "instances": ["suryodaya", "keystone"],
+  "mode": "offline_only",
+  "prompt": "What is the cost health of each project?",
+  "fixture": "evm_basic",
+  "script": [
+    {"name": "company_context", "arguments": {}},
+    {"name": "load_snapshot", "arguments": {"scope": "projects"}},
+    {"name": "load_snapshot", "arguments": {"scope": "money"}},
+    {"name": "evm_summary", "arguments": {}},
+    "STOP"
+  ],
+  "verifier": "evm_matches",
+  "checks": "actual = sum(hours*rate) and earned = percent_complete*budget recomputed independently; overspend flagged; missing budget is insufficient_data."
+}

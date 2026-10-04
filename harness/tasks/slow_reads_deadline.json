@@ -1,0 +1,19 @@
+{
+  "id": "slow_reads_deadline",
+  "note": "AI-assisted",
+  "instances": ["suryodaya", "keystone"],
+  "mode": "offline_only",
+  "prompt": "Which projects are behind schedule?",
+  "fixture": "behind_basic",
+  "latency_s": 1.5,
+  "deadline_s": 4,
+  "script": [
+    {"name": "company_context", "arguments": {}},
+    {"name": "load_snapshot", "arguments": {"scope": "projects"}},
+    {"name": "schedule_integrity", "arguments": {}},
+    {"name": "behind_schedule_projects", "arguments": {}},
+    "STOP"
+  ],
+  "verifier": "partial_finding_stored",
+  "checks": "Reads slower than the deadline still end with a stored partial finding."
+}

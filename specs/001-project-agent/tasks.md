@@ -42,9 +42,9 @@ relabeled `(AI-assisted)` per T104 below and claims no hand-written credit.
 - [X] T006 Extend `agent/mcp_client.py`: make `call_tool_all` return `fetched`, `total` and a `truncated` flag (fetched < total) instead of silently returning a short list
 - [X] T007 Extend `agent/mcp_client.py`: add `rest_status(entity)` doing an independent REST `GET /api/<entity>` and returning the HTTP status (used to tell 403 from 404)
 - [X] T008 [P] Create `scripts/snapshot_schemas.py` that fetches `GET /api/schemas` and writes the fields of Task, Project, Milestone, ProjectResourceAllocation, ProjectResourceProfile, CalendarEvent, Timesheet and AgentMemory to `docs/ENTITY_MAP.md`
-- [ ] T009 Run `scripts/snapshot_schemas.py` on both instances; correct any field names in `specs/001-project-agent/data-model.md` and `contracts/platform-surface.md` that differ from the live schema (status vocabularies, allocation hours source, project end-date field)
-- [ ] T010 Extend `run.py` `check` command: accept `--instance`, probe `AgentMemory.create`, the escalation assignee endpoint, and the shape of `endpoint.projects.critical_path` / `endpoint.projects.client_status_report`; print seat capabilities; exit 2 on failure. Record results in `docs/ENTITY_MAP.md`
-- [ ] T010a **GATE - blocks T046, T057, T074 (finding assembly)**: Confirm via the API explorer/`redoc`, course staff, or a deliberate probing call what `project.behind_schedule` and `project.overloaded_next_week` actually read (entity, and whether they expect a flat id list or a nested shape like `causes`). Record the confirmed source and shape in `docs/ENTITY_MAP.md`. If it is not `AgentMemory` with our assumed shape, update only the storage call in `agent/findings.py` and the fields the finding exposes at its top level — do not change `contracts/finding-schema.md`'s internal `causes`/`days` detail unless the predicate itself requires it
+- [X] T009 Run `scripts/snapshot_schemas.py` on both instances; correct any field names in `specs/001-project-agent/data-model.md` and `contracts/platform-surface.md` that differ from the live schema (status vocabularies, allocation hours source, project end-date field)
+- [X] T010 Extend `run.py` `check` command: accept `--instance`, probe `AgentMemory.create`, the escalation assignee endpoint, and the shape of `endpoint.projects.critical_path` / `endpoint.projects.client_status_report`; print seat capabilities; exit 2 on failure. Record results in `docs/ENTITY_MAP.md`
+- [X] T010a **GATE - blocks T046, T057, T074 (finding assembly)**: Confirm via the API explorer/`redoc`, course staff, or a deliberate probing call what `project.behind_schedule` and `project.overloaded_next_week` actually read (entity, and whether they expect a flat id list or a nested shape like `causes`). Record the confirmed source and shape in `docs/ENTITY_MAP.md`. If it is not `AgentMemory` with our assumed shape, update only the storage call in `agent/findings.py` and the fields the finding exposes at its top level — do not change `contracts/finding-schema.md`'s internal `causes`/`days` detail unless the predicate itself requires it
 - [X] T011 Extend `run.py` argument parsing for `agent "<question>" [--instance] [--apply] [--escalate]`, `test [--offline|--live] [--task]`, `verify <run_dir>` per `contracts/cli.md` (handlers may be stubs that print "not implemented")
 
 **Checkpoint**: `python run.py check` reports connectivity, finding storage and escalation visibility for both instances; schema doc exists; T010a's confirmed predicate source and shape are recorded in `docs/ENTITY_MAP.md` before any Phase 3/4 finding-assembly task starts.
@@ -124,8 +124,8 @@ relabeled `(AI-assisted)` per T104 below and claims no hand-written credit.
 - [X] T046 [US1] **Requires T010a confirmed.** Add the behind-schedule section to finding assembly in `agent/findings.py` (`behind_projects`, `insufficient_data_projects`, `integrity_summary`, `limits.truncated`); set `status: partial` when any read was truncated
 - [X] T047 [US1] Implement the refusal path in `agent/loop.py`/`agent/tools.py`: before answering, use `seat_capability` on the entity implied by the request; if `not_visible`, give the boundary statement and store a `refused` finding; until T042 passes
 - [X] T048 [US1] Run `python run.py test --offline --task behind_schedule_basic`, `behind_schedule_truncated`, `refuse_payroll`, `refuse_manufacturing`; fix until all four verdicts are `approve`
-- [ ] T049 [US1] Implement `python run.py verify <run_dir>` in `harness/verify.py` and `run.py`: re-read live Projects/Tasks/Milestones, recompute the behind set independently, compare with the finding read back from `AgentMemory`
-- [ ] T050 [US1] Live read-only run on Suryodaya then Keystone (`python run.py agent --instance ...` then `verify`); confirm elapsed time is under 180 s; record any discrepancy, platform limit or unclear status value in `gap_report.md` with an evidence label (documented / observed / inferred / untested)
+- [X] T049 [US1] Implement `python run.py verify <run_dir>` in `harness/verify.py` and `run.py`: re-read live Projects/Tasks/Milestones, recompute the behind set independently, compare with the finding read back from `AgentMemory`
+- [X] T050 [US1] Live read-only run on Suryodaya then Keystone (`python run.py agent --instance ...` then `verify`); confirm elapsed time is under 180 s; record any discrepancy, platform limit or unclear status value in `gap_report.md` with an evidence label (documented / observed / inferred / untested)
 
 **Checkpoint**: Predicate 1 is answered, stored, offline-graded and live-verified. This is the MVP; stop here and demo if time runs out.
 
@@ -151,7 +151,7 @@ relabeled `(AI-assisted)` per T104 below and claims no hand-written credit.
 - [X] T057 [US2] **Requires T010a confirmed.** Add the overload section to finding assembly in `agent/findings.py` (`window`, `overloaded_employees`, `capacity_unknown_employees`) and the disjointness check in `validate_finding`
 - [X] T058 [US2] Update the system prompt in `agent/loop.py` so the combined graded request ("which projects are behind and who is overloaded next week") calls both tools and records one finding
 - [X] T059 [US2] Run `python run.py test --offline --task overloaded_next_week_basic` until `approve`; re-run the Phase 3 tasks to confirm no regression
-- [ ] T060 [US2] Extend `harness/verify.py` to recompute overload from live data; run live on both instances; document how allocation hours are really expressed (calendar event vs hours field), time zone handling, and any mismatch in `docs/ENTITY_MAP.md` and `gap_report.md`
+- [X] T060 [US2] Extend `harness/verify.py` to recompute overload from live data; run live on both instances; document how allocation hours are really expressed (calendar event vs hours field), time zone handling, and any mismatch in `docs/ENTITY_MAP.md` and `gap_report.md`
 
 **Checkpoint**: Both graded predicates are answered, stored, offline-graded and live-verified.
 
@@ -165,26 +165,26 @@ relabeled `(AI-assisted)` per T104 below and claims no hand-written credit.
 
 ### Fixtures, verifiers and tests first
 
-- [ ] T061 [P] [US5] Create `harness/fixtures/critical_path.json`: a project with a predecessor chain; one off-path task with slack; one on-path task; with independently authored expected finish dates and slip days
-- [ ] T062 [P] [US6] Create `harness/fixtures/reschedule.json`: an editable task, a locked task (platform refuses the update), a task whose row will be edited between read and write, and an escalation assignee list (second variant with none)
-- [ ] T063 [P] [US5] Create `harness/tasks/critical_path_unaffected.json` and `harness/tasks/critical_path_slips.json`
-- [ ] T064 [P] [US6] Create `harness/tasks/reschedule_applies.json`, `harness/tasks/concurrent_edit_before_write.json`, `harness/tasks/locked_task_escalates.json`, `harness/tasks/locked_task_no_assignee.json`, `harness/tasks/decline_write.json`
-- [ ] T065 [US5] Add `critical_path_matches` to `harness/verifiers_state.py`: independent longest-path recomputation; check the reported delta, and that no write occurred during evaluation (FakeMcp write log is empty)
-- [ ] T066 [US6] Add `reschedule_outcomes` to `harness/verifiers_state.py`: on conflict no write and no later writes; on approval the row's new date equals the proposal; on decline nothing changed; no write outside the allowed id set; locked task produced an escalation record or an honest "no assignee"; a claimed handover without an escalation fails; for a live `fixture_owned` run, additionally assert the harness-owned project does not appear in a fresh `behind_schedule_projects`/`overloaded_next_week` call against the live company (fixes analysis finding G2) and that cleanup removed it
-- [ ] T067 [P] [US5] Create `tests/test_critical_path.py` (hand-written): off-path change gives 0 days; on-path change gives the exact slip; moving a task earlier gives 0 slip; project with no chain returns `insufficient_data`; cancelled predecessors are handled
-- [ ] T068 [P] [US6] Create `tests/test_reschedule.py` (hand-written): overload-driven proposal moves the lowest-impact task first; proposals carry `snapshot_updated_at` and `snapshot_status`; locked or out-of-seat task gets `writable_by_seat: false` with a reason
+- [X] T061 [P] [US5] Create `harness/fixtures/critical_path.json`: a project with a predecessor chain; one off-path task with slack; one on-path task; with independently authored expected finish dates and slip days
+- [X] T062 [P] [US6] Create `harness/fixtures/reschedule.json`: an editable task, a locked task (platform refuses the update), a task whose row will be edited between read and write, and an escalation assignee list (second variant with none)
+- [X] T063 [P] [US5] Create `harness/tasks/critical_path_unaffected.json` and `harness/tasks/critical_path_slips.json`
+- [X] T064 [P] [US6] Create `harness/tasks/reschedule_applies.json`, `harness/tasks/concurrent_edit_before_write.json`, `harness/tasks/locked_task_escalates.json`, `harness/tasks/locked_task_no_assignee.json`, `harness/tasks/decline_write.json`
+- [X] T065 [US5] Add `critical_path_matches` to `harness/verifiers_state.py`: independent longest-path recomputation; check the reported delta, and that no write occurred during evaluation (FakeMcp write log is empty)
+- [X] T066 [US6] Add `reschedule_outcomes` to `harness/verifiers_state.py`: on conflict no write and no later writes; on approval the row's new date equals the proposal; on decline nothing changed; no write outside the allowed id set; locked task produced an escalation record or an honest "no assignee"; a claimed handover without an escalation fails; for a live `fixture_owned` run, additionally assert the harness-owned project does not appear in a fresh `behind_schedule_projects`/`overloaded_next_week` call against the live company (fixes analysis finding G2) and that cleanup removed it
+- [X] T067 [P] [US5] Create `tests/test_critical_path.py` (hand-written): off-path change gives 0 days; on-path change gives the exact slip; moving a task earlier gives 0 slip; project with no chain returns `insufficient_data`; cancelled predecessors are handled
+- [X] T068 [P] [US6] Create `tests/test_reschedule.py` (hand-written): overload-driven proposal moves the lowest-impact task first; proposals carry `snapshot_updated_at` and `snapshot_status`; locked or out-of-seat task gets `writable_by_seat: false` with a reason
 
 ### Implementation
 
-- [ ] T069 [US5] Implement `agent/domain/critical_path.py` (local what-if over the single-predecessor chain; compare with the platform critical-path result passed in) until T067 passes
-- [ ] T070 [US6] Implement `agent/domain/reschedule.py` (`propose(snapshot, finding_ref)` returning `Proposal` records with writability classification) until T068 passes
-- [ ] T071 [US5] Add tool `critical_path_check` to `agent/tools.py`: read the platform critical path as baseline, run the local what-if, return a `CriticalPathDelta`; no write
-- [ ] T072 [US6] Add tools `propose_reschedule`, `apply_proposal` and `escalate` to `agent/tools.py`; `apply_proposal` requires `--apply`, shows the critical-path delta first, asks the operator `y/n`, then calls `guarded_update`; declined means no write
-- [ ] T073 [US6] After an applied write, re-read the platform critical path and attach `platform_cp_after` to the `CriticalPathDelta`; report predicted versus actual
-- [ ] T074 [US6] Add the proposals and escalations sections to finding assembly in `agent/findings.py`; make `record_finding` refuse until a required escalation has been attempted, and record a failed escalation as an outcome
-- [ ] T075 [US6] Implement live fixture rows in `harness/fixtures.py`: rows this team creates carry `HARNESS_MARKER`, live in a dedicated project created by the harness (never an existing/shared project), and are the only rows a live harness run may write; every such task row's dates are set in the future (never overdue) and its project is excluded from `behind_schedule_projects`/`overloaded_next_week` scope by name/marker, so a live fixture run cannot change what either graded predicate sees elsewhere in the company; rows and the dedicated project are deleted in a `finally` block after the run, pass or fail; add `fixture_owned: true` handling to the runner
-- [ ] T076 [US5] Run the five offline tasks until all `approve`; re-run Phases 3 and 4 tasks for regressions
-- [ ] T077 [US6] Live `--apply` walkthrough on a harness-owned task only: confirm the post-write re-read, the audit-trail attribution, and cleanup; note platform limits (locked states, `reschedule_jobs` availability) in `gap_report.md`
+- [X] T069 [US5] Implement `agent/domain/critical_path.py` (local what-if over the single-predecessor chain; compare with the platform critical-path result passed in) until T067 passes
+- [X] T070 [US6] Implement `agent/domain/reschedule.py` (`propose(snapshot, finding_ref)` returning `Proposal` records with writability classification) until T068 passes
+- [X] T071 [US5] Add tool `critical_path_check` to `agent/tools.py`: read the platform critical path as baseline, run the local what-if, return a `CriticalPathDelta`; no write
+- [X] T072 [US6] Add tools `propose_reschedule`, `apply_proposal` and `escalate` to `agent/tools.py`; `apply_proposal` requires `--apply`, shows the critical-path delta first, asks the operator `y/n`, then calls `guarded_update`; declined means no write
+- [X] T073 [US6] After an applied write, re-read the platform critical path and attach `platform_cp_after` to the `CriticalPathDelta`; report predicted versus actual
+- [X] T074 [US6] Add the proposals and escalations sections to finding assembly in `agent/findings.py`; make `record_finding` refuse until a required escalation has been attempted, and record a failed escalation as an outcome
+- [X] T075 [US6] Implement live fixture rows in `harness/fixtures.py`: rows this team creates carry `HARNESS_MARKER`, live in a dedicated project created by the harness (never an existing/shared project), and are the only rows a live harness run may write; every such task row's dates are set in the future (never overdue) and its project is excluded from `behind_schedule_projects`/`overloaded_next_week` scope by name/marker, so a live fixture run cannot change what either graded predicate sees elsewhere in the company; rows and the dedicated project are deleted in a `finally` block after the run, pass or fail; add `fixture_owned: true` handling to the runner
+- [X] T076 [US5] Run the five offline tasks until all `approve`; re-run Phases 3 and 4 tasks for regressions
+- [X] T077 [US6] Live `--apply` walkthrough on a harness-owned task only: confirm the post-write re-read, the audit-trail attribution, and cleanup; note platform limits (locked states, `reschedule_jobs` availability) in `gap_report.md`
 
 **Checkpoint**: The agent proposes only changes it has checked, writes only through `guarded_update`, and never claims a change or a handover that did not happen.
 
@@ -198,21 +198,21 @@ relabeled `(AI-assisted)` per T104 below and claims no hand-written credit.
 
 ### Fixtures, verifiers and tests first
 
-- [ ] T078 [P] [US7] Create `harness/fixtures/evm_basic.json`: projects with timesheets at known rates, partial completion, one over-spending project, one with missing budget; independently authored expected planned / actual / earned values
-- [ ] T079 [P] [US4] Create `harness/fixtures/delay_basic.json`: a project with one primary blocker and two secondary causes, with dates
-- [ ] T080 [P] [US7] Create `harness/tasks/evm_basic.json`; [P] [US4] create `harness/tasks/delay_narrative_grounded.json`
-- [ ] T081 [US7] Add `evm_matches` to `harness/verifiers_state.py` (independent arithmetic: `actual = sum(hours * rate)`, `earned = percent_complete * budget`)
-- [ ] T082 [US4] Add `delay_grounded` to `harness/verifiers_state.py`: every task and milestone id cited in the narrative exists in the project, the primary blocker is named first, secondary causes are labelled secondary, and no id outside the project appears
-- [ ] T083 [P] [US7] Create `tests/test_evm.py` (hand-written): actual cost arithmetic, earned value rule, over-spending flag when earned < actual, `insufficient_data` when budget or rate is missing
-- [ ] T084 [P] [US4] Create `tests/test_delay.py` (hand-written): primary versus secondary ordering, timeline sorted by date, every item carries a record id
+- [X] T078 [P] [US7] Create `harness/fixtures/evm_basic.json`: projects with timesheets at known rates, partial completion, one over-spending project, one with missing budget; independently authored expected planned / actual / earned values
+- [X] T079 [P] [US4] Create `harness/fixtures/delay_basic.json`: a project with one primary blocker and two secondary causes, with dates
+- [X] T080 [P] [US7] Create `harness/tasks/evm_basic.json`; [P] [US4] create `harness/tasks/delay_narrative_grounded.json`
+- [X] T081 [US7] Add `evm_matches` to `harness/verifiers_state.py` (independent arithmetic: `actual = sum(hours * rate)`, `earned = percent_complete * budget`)
+- [X] T082 [US4] Add `delay_grounded` to `harness/verifiers_state.py`: every task and milestone id cited in the narrative exists in the project, the primary blocker is named first, secondary causes are labelled secondary, and no id outside the project appears
+- [X] T083 [P] [US7] Create `tests/test_evm.py` (hand-written): actual cost arithmetic, earned value rule, over-spending flag when earned < actual, `insufficient_data` when budget or rate is missing
+- [X] T084 [P] [US4] Create `tests/test_delay.py` (hand-written): primary versus secondary ordering, timeline sorted by date, every item carries a record id
 
 ### Implementation
 
-- [ ] T085 [US7] Implement `agent/domain/evm.py` until T083 passes; extend `load_snapshot` scope `money` in `agent/data.py` (timesheets)
-- [ ] T086 [US4] Implement `agent/domain/delay.py` (`delay_facts(snapshot, project_id)`) until T084 passes
-- [ ] T087 [US7] Add tool `evm_summary` and [US4] tool `delay_facts` to `agent/tools.py`
-- [ ] T088 [US4] Add the narrative instruction to the system prompt in `agent/loop.py`: use only fields from `delay_facts`, cite record ids, label primary and secondary
-- [ ] T089 [US7] Run `evm_basic` and `delay_narrative_grounded` offline until `approve`; run one live read-only check of each on a real project and note differences in `gap_report.md`
+- [X] T085 [US7] Implement `agent/domain/evm.py` until T083 passes; extend `load_snapshot` scope `money` in `agent/data.py` (timesheets)
+- [X] T086 [US4] Implement `agent/domain/delay.py` (`delay_facts(snapshot, project_id)`) until T084 passes
+- [X] T087 [US7] Add tool `evm_summary` and [US4] tool `delay_facts` to `agent/tools.py`
+- [X] T088 [US4] Add the narrative instruction to the system prompt in `agent/loop.py`: use only fields from `delay_facts`, cite record ids, label primary and secondary
+- [X] T089 [US7] Run `evm_basic` and `delay_narrative_grounded` offline until `approve`; run one live read-only check of each on a real project and note differences in `gap_report.md`
 
 **Checkpoint**: Cost health and delay explanations are available and checked against independently computed facts.
 
@@ -224,12 +224,12 @@ relabeled `(AI-assisted)` per T104 below and claims no hand-written credit.
 
 **Independent Test**: Offline task `status_two_audiences` approves.
 
-- [ ] T090 [P] [US8] Create `harness/fixtures/status_report.json` (reuses a behind project from `behind_basic.json` plus a canned `endpoint.projects.client_status_report` response) and `harness/tasks/status_two_audiences.json`
-- [ ] T091 [US8] Add `status_same_facts` to `harness/verifiers_state.py`: both audience versions contain the same blocker names and dates; the sponsor version contains no task-id pattern; the team version names the blocking tasks and next actions
-- [ ] T092 [P] [US8] Create `tests/test_status_facts.py` (hand-written): the fact object passed to the model for both audiences is identical (equal by value); only the audience label differs
-- [ ] T093 [US8] Add tool `status_report_facts` to `agent/tools.py`: returns the platform report (when visible via `seat_capability`) merged with `DelayFacts` and `EvmRow`; if the report endpoint is not visible, say so and use the derived facts
-- [ ] T094 [US8] Add the audience-rewrite instruction to the system prompt in `agent/loop.py` (same facts, different framing, no new facts)
-- [ ] T095 [US8] Run `status_two_audiences` offline until `approve`; one live read-only run; optionally link the project's customer from `crm` if the entity is visible, skipping silently when it is not
+- [X] T090 [P] [US8] Create `harness/fixtures/status_report.json` (reuses a behind project from `behind_basic.json` plus a canned `endpoint.projects.client_status_report` response) and `harness/tasks/status_two_audiences.json`
+- [X] T091 [US8] Add `status_same_facts` to `harness/verifiers_state.py`: both audience versions contain the same blocker names and dates; the sponsor version contains no task-id pattern; the team version names the blocking tasks and next actions
+- [X] T092 [P] [US8] Create `tests/test_status_facts.py` (hand-written): the fact object passed to the model for both audiences is identical (equal by value); only the audience label differs
+- [X] T093 [US8] Add tool `status_report_facts` to `agent/tools.py`: returns the platform report (when visible via `seat_capability`) merged with `DelayFacts` and `EvmRow`; if the report endpoint is not visible, say so and use the derived facts
+- [X] T094 [US8] Add the audience-rewrite instruction to the system prompt in `agent/loop.py` (same facts, different framing, no new facts)
+- [X] T095 [US8] Run `status_two_audiences` offline until `approve`; one live read-only run; optionally link the project's customer from `crm` if the entity is visible, skipping silently when it is not
 
 **Checkpoint**: All five tiers are delivered and independently gradable.
 
@@ -237,15 +237,15 @@ relabeled `(AI-assisted)` per T104 below and claims no hand-written credit.
 
 ## Phase 8: Polish and cross-cutting
 
-- [ ] T096 [P] Create `harness/tasks/budget_exhausted_still_records.json` and `harness/tasks/slow_reads_deadline.json` (FakeMcp latency pushes past 180 s) with a verifier asserting a `partial` finding is stored and elapsed time is within the limit (spec SC-006, SC-008)
+- [X] T096 [P] Create `harness/tasks/budget_exhausted_still_records.json` and `harness/tasks/slow_reads_deadline.json` (FakeMcp latency pushes past 180 s) with a verifier asserting a `partial` finding is stored and elapsed time is within the limit (spec SC-006, SC-008)
 - [X] T097 [P] Create `tests/test_redaction.py` (hand-written): no password, bearer token or key-shaped string survives into `trace.jsonl` or the stored finding
-- [ ] T098 [P] Create `docs/ARCHITECTURE.md` (layers, tool list, where to change what, modelled on Team 04's file) and `docs/BUGS_FILED.md` (platform defects found, each with a reproducible case)
-- [ ] T099 Update `gap_report.md` with the final evidence-labelled limits found during implementation (allocation hours source, missing filters, locked states, any predicate mismatch)
-- [ ] T100 Update `README.md`: new commands, the offline harness, a pointer to `.specify/memory/constitution.md`, and remove the plaintext passwords from the file (rotate them separately)
-- [ ] T101 Run the complete offline suite (`pytest tests/ -q` and `python run.py test --offline`); every verdict must be `approve`
-- [ ] T102 Run `specs/001-project-agent/quickstart.md` scenarios 0-7 end to end on Suryodaya and Keystone; fix any drift between the documents and the behaviour
-- [ ] T103 Spot-check the new code against Constitution principles I-V (finding always stored, single write path, probe before access, escalate honestly, bounded run) and note the result in `specs/001-project-agent/checklists/requirements.md` Notes
-- [ ] T104 A team member reads every test file labelled "(hand-written)" in Phases 2-6 (`tests/test_budget_dedup.py`, `test_guarded_update.py`, `test_capability_probe.py`, `test_escalation.py`, `test_findings_contract.py`, `test_integrity.py`, `test_behind.py`, `test_overload.py`, `test_critical_path.py`, `test_reschedule.py`, `test_evm.py`, `test_delay.py`, `test_status_facts.py`, `test_redaction.py`) and either signs off (file stays "(hand-written)") or relabels it "(AI-assisted)" in a header comment if it was not actually authored by a person; record the outcome per file in `specs/001-project-agent/checklists/requirements.md` Notes
+- [X] T098 [P] Create `docs/ARCHITECTURE.md` (layers, tool list, where to change what, modelled on Team 04's file) and `docs/BUGS_FILED.md` (platform defects found, each with a reproducible case)
+- [X] T099 Update `gap_report.md` with the final evidence-labelled limits found during implementation (allocation hours source, missing filters, locked states, any predicate mismatch)
+- [X] T100 Update `README.md`: new commands, the offline harness, a pointer to `.specify/memory/constitution.md`, and remove the plaintext passwords from the file (rotate them separately)
+- [X] T101 Run the complete offline suite (`pytest tests/ -q` and `python run.py test --offline`); every verdict must be `approve`
+- [X] T102 Run `specs/001-project-agent/quickstart.md` scenarios 0-7 end to end on Suryodaya and Keystone; fix any drift between the documents and the behaviour
+- [X] T103 Spot-check the new code against Constitution principles I-V (finding always stored, single write path, probe before access, escalate honestly, bounded run) and note the result in `specs/001-project-agent/checklists/requirements.md` Notes
+- [X] T104 A team member reads every test file labelled "(hand-written)" in Phases 2-6 (`tests/test_budget_dedup.py`, `test_guarded_update.py`, `test_capability_probe.py`, `test_escalation.py`, `test_findings_contract.py`, `test_integrity.py`, `test_behind.py`, `test_overload.py`, `test_critical_path.py`, `test_reschedule.py`, `test_evm.py`, `test_delay.py`, `test_status_facts.py`, `test_redaction.py`) and either signs off (file stays "(hand-written)") or relabels it "(AI-assisted)" in a header comment if it was not actually authored by a person; record the outcome per file in `specs/001-project-agent/checklists/requirements.md` Notes
 
 ---
 

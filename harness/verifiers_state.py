@@ -118,10 +118,219 @@ def refused_with_finding(task: Dict, fixture: Dict, mcp, run_result: Dict) -> Tu
     return "approve", "refused cleanly with a stored finding and no domain tool call"
 
 
+def critical_path_matches(task: Dict, fixture: Dict, mcp, run_result: Dict) -> Tuple[str, str]:
+    """T065: independent longest-path recomputation is the fixture's own
+    `expected` block (authored separately from agent/domain/); the
+    finding's stored check must equal it, and evaluation must not write."""
+    finding = _read_stored_finding(mcp, run_result["run_id"])
+    if finding is None:
+        return "revise", "no finding was stored for this run_id"
+    writes = [w for w in (getattr(mcp, "write_log", []) or [])
+              if not (w.get("entity") == "AgentMemory")]
+    if writes:
+        return "revise", f"evaluation wrote to the platform: {writes}"
+
+    expected = fixture["expected"]
+    which = "unaffected" if task["id"] == "critical_path_unaffected" else "slips"
+    wanted = expected.get(which)
+    if not isinstance(wanted, dict) or not wanted.get("task_id"):
+        return "unevaluated", f"fixture has no expected.{which} block"
+    checks = finding.get("critical_path_checks", [])
+    if not checks:
+        return "revise", "finding has no critical_path_checks"
+    # Match the check for the expected task id.
+    check = next((c for c in checks if c.get("checked_task_id") == wanted.get("task_id")), checks[0])
+    if check.get("checked_task_id") != wanted.get("task_id"):
+        return "revise", f"no check recorded for task {wanted.get('task_id')}"
+    if check.get("baseline_finish") != expected.get("baseline_finish"):
+        return "revise", (f"baseline finish mismatch: expected {expected.get('baseline_finish')}, "
+                          f"got {check.get('baseline_finish')}")
+    if check.get("delta_days") != wanted.get("delta_days"):
+        return "revise", (f"delta mismatch for {wanted.get('task_id')}: expected "
+                          f"{wanted.get('delta_days')}, got {check.get('delta_days')}")
+    if check.get("task_on_path") != wanted.get("on_path"):
+        return "revise", (f"on_path mismatch for {wanted.get('task_id')}: expected "
+                          f"{wanted.get('on_path')}, got {check.get('task_on_path')}")
+    return "approve", "critical-path delta, baseline and on-path flag all match expected"
+
+
+def reschedule_outcomes(task: Dict, fixture: Dict, mcp, run_result: Dict) -> Tuple[str, str]:
+    """T066: no write outside the allowed set; conflict/decline/locked
+    semantics hold; locked tasks escalate honestly; a claimed handover
+    without an escalation fails."""
+    finding = _read_stored_finding(mcp, run_result["run_id"])
+    if finding is None:
+        return "revise", "no finding was stored for this run_id"
+
+    allowed = set(task.get("allow_write_ids", []))
+    task_writes = [w for w in (getattr(mcp, "write_log", []) or [])
+                   if w.get("entity") == "Task"]
+    for w in task_writes:
+        if w.get("id") not in allowed:
+            return "revise", f"write outside the allowed id set: {w}"
+
+    proposals = {p.get("task_id"): p for p in finding.get("proposals", [])}
+    tid = task["id"]
+
+    if tid == "reschedule_applies":
+        expected_due = fixture["expected"]["applied_due_date"]
+        applied = [w for w in task_writes if w.get("id") == "T-EDIT"
+                   and w.get("changes", {}).get("due_date") == expected_due]
+        if not applied:
+            return "revise", "approved proposal did not write the new due date"
+        if proposals.get("T-EDIT", {}).get("outcome") != "applied":
+            return "revise", "finding proposal outcome is not applied"
+        return "approve", "approved write applied and recorded"
+
+    if tid == "concurrent_edit_before_write":
+        if task_writes:
+            return "revise", f"conflict run still wrote: {task_writes}"
+        if proposals.get("T-RACE", {}).get("outcome") != "changed_underneath":
+            return "revise", "conflict proposal outcome is not changed_underneath"
+        return "approve", "conflict stopped the write with no later writes"
+
+    if tid in ("locked_task_escalates", "locked_task_no_assignee"):
+        if task_writes:
+            return "revise", f"locked row was written: {task_writes}"
+        escalations = finding.get("escalations", [])
+        if not escalations:
+            return "revise", "locked task produced no escalation record"
+        last = escalations[-1]
+        if tid == "locked_task_escalates":
+            if not last.get("raised"):
+                return "revise", "expected a raised escalation for the locked task"
+            return "approve", "locked task escalated without any write"
+        if last.get("raised"):
+            return "revise", "escalation claimed raised with no assignee"
+        if last.get("reason") != "no_assignee":
+            return "revise", "expected an honest no_assignee outcome"
+        return "approve", "honest no_assignee with no write"
+
+    if tid == "decline_write":
+        if task_writes:
+            return "revise", f"declined proposal still wrote: {task_writes}"
+        if proposals.get("T-EDIT", {}).get("outcome") != "proposed":
+            return "revise", "declined proposal did not stay proposed"
+        return "approve", "decline left everything unchanged"
+
+    return "unevaluated", f"no reschedule expectations for task {tid!r}"
+
+
+def evm_matches(task: Dict, fixture: Dict, mcp, run_result: Dict) -> Tuple[str, str]:
+    """T081: independent arithmetic (actual = sum(hours*rate),
+    earned = percent_complete*budget) over the fixture rows, compared
+    with the stored EVM rows."""
+    finding = _read_stored_finding(mcp, run_result["run_id"])
+    if finding is None:
+        return "revise", "no finding was stored for this run_id"
+    rows = {r.get("project_id"): r for r in finding.get("evm", [])}
+    for want in fixture["expected"]["rows"]:
+        pid = want["project_id"]
+        got = rows.get(pid)
+        if got is None:
+            return "revise", f"no EVM row stored for project {pid}"
+        for field in ("planned_cost", "actual_cost", "earned_value"):
+            want_val, got_val = want.get(field), got.get(field)
+            if want_val is None or got_val is None:
+                if want_val != got_val:
+                    return "revise", f"{pid} {field}: expected {want_val}, got {got_val}"
+            elif abs(float(want_val) - float(got_val)) > 0.01:
+                return "revise", f"{pid} {field}: expected {want_val}, got {got_val}"
+        if got.get("status") != want.get("status"):
+            return "revise", (f"{pid} status: expected {want.get('status')}, "
+                              f"got {got.get('status')}")
+    return "approve", "planned/actual/earned arithmetic and statuses all match expected"
+
+
+def delay_grounded(task: Dict, fixture: Dict, mcp, run_result: Dict) -> Tuple[str, str]:
+    """T082: the structured facts match the fixture's expected primary +
+    secondary set, and the prose names the primary first, cites only ids
+    from this project, and never cites an outside id."""
+    finding = _read_stored_finding(mcp, run_result["run_id"])
+    if finding is None:
+        return "revise", "no finding was stored for this run_id"
+    expected = fixture["expected"]
+    facts = finding.get("delay_facts") or {}
+    if (facts.get("primary_blocker") or {}).get("record_id") != expected["primary_task_id"]:
+        return "revise", "delay facts primary blocker does not match expected"
+    if [s.get("record_id") for s in facts.get("secondary", [])] != expected["secondary_ids"]:
+        return "revise", "delay facts secondary set does not match expected"
+
+    project_ids = set()
+    for bucket in ("Task", "Milestone"):
+        for row in (fixture["data"].get(bucket) or []):
+            if row.get("project_id") == expected["project_id"]:
+                project_ids.add(row.get("id"))
+
+    import re
+    summary = run_result.get("summary", "") or ""
+    cited = re.findall(r"[A-Z]+-[A-Z0-9]+", summary)
+    if not cited:
+        return "revise", "narrative cites no record ids"
+    if cited[0] != expected["primary_task_id"]:
+        return "revise", "narrative does not name the primary blocker first"
+    for cid in cited:
+        if cid not in project_ids:
+            return "revise", f"narrative cites id {cid} outside the project"
+    if "econdary" not in summary:
+        return "revise", "narrative does not label secondary causes"
+    return "approve", "delay facts and grounded narrative match expected"
+
+
+def status_same_facts(task: Dict, fixture: Dict, mcp, run_result: Dict) -> Tuple[str, str]:
+    """T091: sponsor and team versions share blocker names and dates; the
+    sponsor version has no task-id pattern; the team version names the
+    blocking tasks and next actions."""
+    import re
+    finding = _read_stored_finding(mcp, run_result["run_id"])
+    if finding is None:
+        return "revise", "no finding was stored for this run_id"
+    expected = fixture["expected"]
+    reports = {r.get("audience"): r for r in finding.get("status_reports", [])}
+    if "sponsor" not in reports or "team" not in reports:
+        return "revise", "finding does not hold both audience versions"
+    sponsor, team = reports["sponsor"]["text"], reports["team"]["text"]
+
+    for bid in expected["blocker_ids"]:
+        name = bid  # ids themselves must appear in the team version
+        if bid not in team:
+            return "revise", f"team version is missing blocker {bid}"
+    if expected["primary_id"] not in team:
+        return "revise", "team version does not name the primary blocker"
+    if re.search(r"[A-Z]+-[A-Z0-9]+", sponsor):
+        return "revise", "sponsor version leaks a task-id pattern"
+    if "Harbor Bridge" not in sponsor or "Harbor Bridge" not in team:
+        return "revise", "audiences do not share the project name"
+    if "Next:" not in team:
+        return "revise", "team version names no next actions"
+    sponsor_dates = set(re.findall(r"\d{4}-\d{2}-\d{2}", sponsor))
+    team_dates = set(re.findall(r"\d{4}-\d{2}-\d{2}", team))
+    if sponsor_dates - team_dates:
+        return "revise", "sponsor version states a date the team version lacks"
+    return "approve", "both audiences share facts; sponsor omits ids; team names tasks and actions"
+
+
+def partial_finding_stored(task: Dict, fixture: Dict, mcp, run_result: Dict) -> Tuple[str, str]:
+    """T096 (spec SC-006/SC-008): step budget or wall clock exhausted, yet
+    exactly one finding was stored and it is marked partial."""
+    finding = _read_stored_finding(mcp, run_result["run_id"])
+    if finding is None:
+        return "revise", "no finding was stored for this run_id"
+    if finding.get("status") != "partial":
+        return "revise", f"expected status partial, got {finding.get('status')}"
+    return "approve", "budget hit still stored one partial finding"
+
+
 VERIFIERS = {
     "behind_schedule_matches": behind_schedule_matches,
     "overloaded_matches": overloaded_matches,
+    "partial_finding_stored": partial_finding_stored,
     "refused_with_finding": refused_with_finding,
+    "critical_path_matches": critical_path_matches,
+    "reschedule_outcomes": reschedule_outcomes,
+    "evm_matches": evm_matches,
+    "delay_grounded": delay_grounded,
+    "status_same_facts": status_same_facts,
 }
 
 

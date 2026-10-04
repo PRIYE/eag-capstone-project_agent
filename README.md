@@ -95,9 +95,9 @@ AS_PASSWORD=***set-in-dotenv***
 # AS_PASSWORD=***set-in-dotenv***
 
 # Add YOUR model key:
-OPENAI_API_KEY=sk-...                                  # ← Add this
-MODEL_PROVIDER=openai
-MODEL_NAME=gpt-4
+GOOGLE_API_KEY=AI...                                   # ← Add this
+MODEL_PROVIDER=google
+MODEL_NAME=gemini-3.1-flash-lite-preview
 ```
 
 ### `agent/mcp_client.py` - AgentSwitch API
@@ -143,6 +143,17 @@ Your agent must **re-read before acting** and handle changing data gracefully.
 - **Hand-written tests**: 10 points each (AI-generated tests = 0 points)
 - **Real AgentSwitch bugs**: 100 points each
 
+## Commands
+
+```bash
+python run.py check --instance suryodaya      # connectivity + capability probe (also: keystone)
+python run.py agent "question" [--apply]      # one bounded run (read-only unless --apply)
+python run.py test --offline                  # full offline harness (no network, no model key)
+python run.py test --live --task <id>         # live grading against the real platform
+python run.py verify harness/runs/<run_dir>  # re-grade a stored run from live data
+python scripts/snapshot_schemas.py --instance suryodaya  # refresh docs/ENTITY_MAP.md
+```
+
 ## Next Steps
 
 1. **Add your AI API key** to `.env`
@@ -150,7 +161,9 @@ Your agent must **re-read before acting** and handle changing data gracefully.
 3. **Study the UI** for 10 minutes to understand the domain
 4. **Research a competitor** and write your gap report
 5. **Test your agent** with `python run.py agent`
-6. **Run full harness** with `python run.py test`
+6. **Run full harness** with `python run.py test --offline`
+
+Governing principles: `.specify/memory/constitution.md`. No live secrets are stored in this file — only placeholders; real values live in `.env`, which is git-ignored.
 
 ## Switching to US Instance (Keystone)
 

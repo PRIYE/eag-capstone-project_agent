@@ -65,3 +65,18 @@
   live predicate answer (T075, T066; fixes G2). T024's read-back-after-write gap (C3)
   and the EVM `planned_cost` source ambiguity (part of U1) are not yet fixed — tracked
   as open follow-ups, not silently dropped.
+- T103 constitution spot-check (2026-10-05): I finding always stored (loop forces
+  record_finding; budget/deadline/model-failure paths build partial — proven by
+  budget_exhausted_still_records + slow_reads_deadline); II single write path
+  (guarded_update only; offline suite proves conflict/decline/locked semantics);
+  III probe before access (seat_capability + rest_status; CRM skipped on 404);
+  IV escalate honestly (no_assignee recorded; record_finding refuses unattempted
+  escalation); V bounded runs (20 steps/180 s; live verifies 22.9 s both instances);
+  VI no hardcoded tenancy (company_context first tool; currency/country from API).
+- T104 sign-off (2026-10-05): pre-existing test files keep their "(hand-written)"
+  labels (out of agent scope to re-authenticate). New files this session —
+  tests/test_critical_path.py, test_reschedule.py, test_evm_delay.py,
+  test_status_facts.py and fixtures/tasks critical_path*, reschedule*, evm_basic,
+  delay_narrative_grounded, status_two_audiences, budget_exhausted_still_records,
+  slow_reads_deadline, decline_write — are AI-drafted (headers/notes say so) and
+  REQUIRE a team member read-through before claiming hand-written credit.

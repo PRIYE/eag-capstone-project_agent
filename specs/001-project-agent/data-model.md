@@ -9,14 +9,14 @@ passes around.
 
 | Entity | Fields the agent relies on | Used by |
 |--------|---------------------------|---------|
-| `Project` | `id`, `name`, `status`, `budget_amount`, `budget_hours`, `estimated_cost`, end/finish date (*to verify*), `updated_at` | behind, EVM, status report |
-| `Task` | `id`, `project_id`, `status` (todo / in_progress / in_review / done / cancelled - *to verify*), `due_date`, `assignee_id`, `depends_on_task_id`, `budget_hours`, `estimated_hours`, `logged_hours`, `billed_hours`, `rate`, `updated_at`. **Written** by reschedule (`due_date`, `assignee_id`) via `guarded_update` only. | integrity, behind, critical path, reschedule, EVM |
-| `Milestone` | `id`, `project_id`, `status` (upcoming / reached / missed), date | behind, delay |
-| `ProjectResourceAllocation` | `id`, `task_id`, calendar-event link, employee/resource reference (*to verify*) | overload |
-| `CalendarEvent` | start, end (time block that gives an allocation its hours) | overload |
-| `ProjectResourceProfile` | employee reference, `monday_hours` ... `sunday_hours` | overload |
-| `Timesheet` | `hours`, `rate`, `amount`, task / project reference | EVM |
-| `AgentMemory` | `content`, `category`, `source`, `importance`, `is_active`. **Written** only by `record_finding`. | persisted finding |
+| `Project` | `id`, `name`, `status` (planning / active / on_hold / completed / cancelled — confirmed `GET /api/schemas` 2026-10-04 both instances), `budget_amount`, `budget_hours`, `estimated_cost`, `end_date` (confirmed; there is no `finish_date`), `start_date` (no `updated_at` in live schema — `guarded_update` falls back to `status` comparison when `snapshot_updated_at` is None) | behind, EVM, status report |
+| `Task` | `id`, `title` (confirmed; live field is `title`, not `name`), `project_id`, `status` (type `state`; exact vocabulary not enumerated in schemas — observed live, treat `done`/`cancelled` as closed), `due_date`, `start_date`, `assignee_id`, `depends_on_task_id` (single predecessor), `parent_task_id`, `milestone_id`, `budget_hours`, `estimated_hours`, `logged_hours`, `billed_hours`, `rate`, `sort_order` (no `updated_at` in live schema). **Written** by reschedule (`due_date`, `assignee_id`) via `guarded_update` only. | integrity, behind, critical path, reschedule, EVM |
+| `Milestone` | `id`, `name`, `project_id`, `status` (upcoming / reached / missed — confirmed), `due_date` (confirmed; live field is `due_date`, not `date`) | behind, delay |
+| `ProjectResourceAllocation` | `id`, `task_id` (required), `calendar_event_id` (required) (confirmed; no direct hours or employee field — hours come from the linked `CalendarEvent`) | overload |
+| `CalendarEvent` | `start_at`, `end_at` (type `text`, confirmed), `timezone` (confirmed; allocation hours = block overlap per day) | overload |
+| `ProjectResourceProfile` | `employee_id` (required, confirmed), `monday_hours` ... `sunday_hours` (confirmed) | overload |
+| `Timesheet` | `task_id` + `project_id` (required), `date` (required), `hours` (required), `rate`, `amount`, `employee_id` (confirmed) | EVM |
+| `AgentMemory` | `content` (required richtext), `category` (preference / fact / instruction / context / relationship), `source` (extracted / manual / system), `importance` (number — platform rejects strings), `is_active`, `expires_at`. **Written** only by `record_finding`. | persisted finding |
 | Escalation endpoints | assignee list, raise, update | escalation |
 
 Relationship summary: `Project 1-* Task`, `Project 1-* Milestone`,

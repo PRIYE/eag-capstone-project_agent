@@ -1,0 +1,18 @@
+{
+  "id": "status_two_audiences",
+  "note": "AI-assisted",
+  "instances": ["suryodaya", "keystone"],
+  "mode": "offline_only",
+  "prompt": "Write a sponsor update and a team update for project P-STAT.",
+  "fixture": "status_report",
+  "script": [
+    {"name": "company_context", "arguments": {}},
+    {"name": "load_snapshot", "arguments": {"scope": "projects"}},
+    {"name": "load_snapshot", "arguments": {"scope": "money"}},
+    {"name": "status_report_facts", "arguments": {"project_id": "P-STAT", "audience": "sponsor"}},
+    {"name": "status_report_facts", "arguments": {"project_id": "P-STAT", "audience": "team"}},
+    "STOP"
+  ],
+  "verifier": "status_same_facts",
+  "checks": "Sponsor and team versions share blocker names and dates; sponsor omits task ids; team names tasks and next actions."
+}

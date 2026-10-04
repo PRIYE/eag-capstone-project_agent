@@ -1,0 +1,11 @@
+{
+  "id": "budget_exhausted_still_records",
+  "note": "AI-assisted",
+  "instances": ["suryodaya", "keystone"],
+  "mode": "offline_only",
+  "prompt": "Which projects are behind schedule?",
+  "fixture": "behind_basic",
+  "script": ["LOOP_FOREVER"],
+  "verifier": "partial_finding_stored",
+  "checks": "A model that never stops still ends with a stored partial finding within budget."
+}

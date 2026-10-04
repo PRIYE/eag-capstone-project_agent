@@ -37,6 +37,12 @@ def _list_task_ids() -> List[str]:
     return sorted(p.stem for p in TASKS_DIR.glob("*.json"))
 
 
+def _endpoint_ok(payload):
+    """Canned offline endpoint response for task-level `endpoints` setup."""
+    from agent.mcp_client import MCPResult
+    return MCPResult(success=True, data=payload)
+
+
 def _make_run_dir(instance: str) -> Path:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     run_dir = RUNS_DIR / f"{stamp}-{instance}"
@@ -67,8 +73,19 @@ def _run_offline_task(task_id: str, instance: str) -> Dict[str, Any]:
 
     fixture = load_fixture(task["fixture"]) if task.get("fixture") else {"data": {}, "expected": {}}
     mcp = FakeMcp(fixture["data"], entity_statuses=fixture.get("entity_statuses", {}),
-                  entity_total_overrides=fixture.get("entity_total_overrides", {}))
+                  entity_total_overrides=fixture.get("entity_total_overrides", {}),
+                  latency_s=float(task.get("latency_s", 0.0)))
     mcp.data.setdefault("AgentMemory", [])
+
+    # Task-level offline setup (documented in harness/tasks/README.md):
+    # canned endpoint responses (e.g. escalation assignees) and programmed
+    # concurrent edits applied on the next read of a row.
+    for ep_name, ep_payload in (task.get("endpoints") or {}).items():
+        payload = ep_payload
+        mcp.register_endpoint(ep_name, lambda args, _p=payload: _endpoint_ok(_p))
+    for edit in task.get("on_read_edits") or []:
+        updates = dict(edit.get("set", {}))
+        mcp.on_read(edit["entity"], edit["id"], lambda row, _u=updates: row.update(_u))
 
     script = task.get("script", ["STOP"])
     model = ScriptedModel(script=script, final_answer=task.get("final_answer", "Done."))
@@ -76,12 +93,23 @@ def _run_offline_task(task_id: str, instance: str) -> Dict[str, Any]:
     def on_event(event):
         _write_trace_event(run_dir, event)
 
+    from agent import safety as _safety
+    budget = None
+    if task.get("deadline_s"):
+        # Offline-only test hook (T096): a short wall clock so deadline
+        # behavior is gradable without waiting out the 180 s live budget.
+        budget = _safety.RunBudget(deadline_s=float(task["deadline_s"]))
+
     start = time.monotonic()
     run_result = run_agent(
         mcp, model, task["prompt"], instance=instance,
         as_of=fixture.get("as_of") or task.get("as_of"),
         on_event=on_event,
+        apply_writes=bool(task.get("allow_apply")),
+        allowed_write_ids=set(task.get("allow_write_ids", [])),
+        budget=budget,
     )
+    run_result["mode"] = "offline"
     elapsed = time.monotonic() - start
 
     verifier_name = task.get("verifier")
@@ -129,11 +157,29 @@ def _run_live_task(task_id: str, instance: str) -> Dict[str, Any]:
     client = create_client_for(instance)
     model = create_model()
 
+    # T075: live harness-owned rows (dedicated HARNESS_MARKER project +
+    # future-dated task). The ONLY rows a live harness run may write;
+    # deleted in a finally block, pass or fail.
+    owned_project_id = owned_task_id = None
+    allowed_write_ids = set()
+    if task.get("fixture_owned"):
+        from harness.fixtures import create_owned_rows, delete_owned_rows  # noqa: F401
+        from agent import config as _config
+        owned_project_id, owned_task_id = create_owned_rows(client, _config.HARNESS_MARKER)
+        allowed_write_ids = {owned_task_id}
+
     def on_event(event):
         _write_trace_event(run_dir, event)
 
     start = time.monotonic()
-    run_result = run_agent(client, model, task["prompt"], instance=instance, on_event=on_event)
+    try:
+        run_result = run_agent(client, model, task["prompt"], instance=instance, on_event=on_event,
+                               apply_writes=False, allowed_write_ids=allowed_write_ids)
+    finally:
+        if owned_project_id and owned_task_id:
+            from harness.fixtures import delete_owned_rows
+            delete_owned_rows(client, owned_project_id, owned_task_id)
+    run_result["mode"] = "live"
     elapsed = time.monotonic() - start
 
     verdict, detail = "unevaluated", "live verification requires harness/verify.py (run.py verify <run_dir>)"

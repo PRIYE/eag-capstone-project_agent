@@ -44,7 +44,8 @@ def _dated_causes_for_project(snapshot: Snapshot, project_id: str) -> List[Cause
 
     for milestone in snapshot.milestones_for(project_id):
         m_status = milestone.get("status")
-        m_date = _dates.parse_date(milestone.get("date"))
+        # Live schema uses `due_date`; offline fixtures use `date`. Accept both (T009).
+        m_date = _dates.parse_date(milestone.get("due_date", milestone.get("date")))
         if m_status == "missed":
             causes.append(Cause(kind="missed_milestone", milestone_id=milestone.get("id")))
         elif m_status == "upcoming" and m_date and as_of and m_date < as_of:

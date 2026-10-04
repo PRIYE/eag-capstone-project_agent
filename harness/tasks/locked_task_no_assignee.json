@@ -1,0 +1,23 @@
+{
+  "id": "locked_task_no_assignee",
+  "note": "AI-assisted",
+  "instances": ["suryodaya", "keystone"],
+  "mode": "offline_only",
+  "prompt": "Move task T-LOCK to 2026-10-28.",
+  "fixture": "reschedule",
+  "allow_apply": true,
+  "allow_write_ids": ["T-LOCK"],
+  "endpoints": {
+    "endpoint.agent_governance.escalations.assignees": {"data": []}
+  },
+  "script": [
+    {"name": "company_context", "arguments": {}},
+    {"name": "load_snapshot", "arguments": {"scope": "projects"}},
+    {"name": "propose_reschedule", "arguments": {"requests": [{"task_id": "T-LOCK", "new_due_date": "2026-10-28"}]}},
+    {"name": "apply_proposal", "arguments": {"task_id": "T-LOCK", "confirm": true}},
+    {"name": "escalate", "arguments": {"reason": "task T-LOCK is locked", "reason_code": "other"}},
+    "STOP"
+  ],
+  "verifier": "reschedule_outcomes",
+  "checks": "Locked row is never written; with no assignee the finding honestly records no_assignee."
+}

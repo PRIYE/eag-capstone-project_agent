@@ -1,0 +1,33 @@
+{
+  "note": "AI-assisted",
+  "as_of": "2026-10-04",
+  "data": {
+    "Project": [
+      {"id": "P-COST", "name": "Costly", "budget_amount": 10000},
+      {"id": "P-OVER", "name": "Overspent", "budget_amount": 5000},
+      {"id": "P-NOBUD", "name": "NoBudget"}
+    ],
+    "Task": [
+      {"id": "T-C1", "project_id": "P-COST", "status": "done", "budget_hours": 40, "rate": 100},
+      {"id": "T-C2", "project_id": "P-COST", "status": "todo", "budget_hours": 60, "rate": 100},
+      {"id": "T-O1", "project_id": "P-OVER", "status": "done", "budget_hours": 20, "rate": 100},
+      {"id": "T-O2", "project_id": "P-OVER", "status": "todo", "budget_hours": 80, "rate": 100},
+      {"id": "T-N1", "project_id": "P-NOBUD", "status": "todo"}
+    ],
+    "Milestone": [],
+    "Timesheet": [
+      {"id": "TS-1", "project_id": "P-COST", "task_id": "T-C1", "hours": 30, "rate": 100},
+      {"id": "TS-2", "project_id": "P-COST", "task_id": "T-C2", "hours": 5, "rate": 100},
+      {"id": "TS-3", "project_id": "P-OVER", "task_id": "T-O1", "hours": 20, "rate": 100},
+      {"id": "TS-4", "project_id": "P-OVER", "task_id": "T-O2", "hours": 50, "rate": 100},
+      {"id": "TS-5", "project_id": "P-NOBUD", "task_id": "T-N1", "hours": 5, "rate": 100}
+    ]
+  },
+  "expected": {
+    "rows": [
+      {"project_id": "P-COST", "planned_cost": 10000, "actual_cost": 3500, "earned_value": 4000, "status": "on_budget"},
+      {"project_id": "P-OVER", "planned_cost": 5000, "actual_cost": 7000, "earned_value": 1000, "status": "over_spending"},
+      {"project_id": "P-NOBUD", "planned_cost": null, "actual_cost": null, "earned_value": null, "status": "insufficient_data"}
+    ]
+  }
+}

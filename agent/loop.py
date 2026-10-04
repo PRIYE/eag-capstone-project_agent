@@ -42,6 +42,17 @@ you do not need to call anything special for that - the system records
 it automatically once you stop calling tools or the run budget is
 reached. Keep calling tools until you have what you need to answer,
 then give a concise final answer summarizing what was found.
+
+When explaining why a project slipped, narrate ONLY the fields returned
+by `delay_facts`: name the primary blocker first, label every other
+cause secondary, cite record ids, and never invent a cause, date, or
+id that is not in those facts.
+
+When asked for a status update, call `status_report_facts` once per
+audience and keep both versions to the SAME facts: the sponsor version
+states blockers and dates with no task ids; the team version names the
+blocking tasks and next actions. Never add a fact for one audience that
+the other does not share.
 """
 
 
@@ -60,6 +71,12 @@ def _build_finding_from_state(state: _tools.RunState, run_id: str, instance: str
     from .domain import integrity as _integrity_mod
     integrity_summary = _integrity_mod.summary_by_kind(integrity_flags) if integrity_flags else {}
 
+    proposals = state.results.get("proposals") or []
+    cp_checks = state.results.get("critical_path_checks") or []
+    notes = []
+    if state.results.get("platform_cp_after") is not None:
+        notes.append("platform_cp_after captured after an applied write")
+
     finding = _findings.assemble_finding(
         run_id=run_id,
         instance=instance,
@@ -72,11 +89,23 @@ def _build_finding_from_state(state: _tools.RunState, run_id: str, instance: str
         overloaded_employees=[e.to_dict() for e in overload.overloaded] if overload else [],
         capacity_unknown_employees=overload.capacity_unknown if overload else [],
         integrity_summary=integrity_summary,
-        proposals=[],
+        proposals=[_tools._as_dict(p) for p in proposals],
         escalations=state.escalations_attempted,
-        limits={"not_visible": state.not_visible, "truncated": truncated, "notes": []},
+        limits={"not_visible": state.not_visible, "truncated": truncated, "notes": notes},
         budget={},
     )
+    # T074/US5 + T087/US7+US4: analysis payloads ride along for the
+    # verifier; the persisted schema ignores unknown keys on read-back.
+    finding["critical_path_checks"] = [_tools._as_dict(c) for c in cp_checks]
+    evm_rows = state.results.get("evm_rows") or []
+    if evm_rows:
+        finding["evm"] = [_tools._as_dict(r) for r in evm_rows]
+    delay_facts = state.results.get("delay_facts")
+    if delay_facts is not None:
+        finding["delay_facts"] = _tools._as_dict(delay_facts)
+    status_reports = state.results.get("status_reports") or []
+    if status_reports:
+        finding["status_reports"] = [_tools._as_dict(r) for r in status_reports]
     return finding
 
 
@@ -110,7 +139,8 @@ def _execute_tool_calls_parallel(state: _tools.RunState, tool_calls: List[Dict])
 def run_agent(client, model, question: str, instance: str = "suryodaya",
               apply_writes: bool = False, allow_escalate: bool = False,
               as_of: Optional[str] = None, run_id: Optional[str] = None,
-              on_event=None, budget: Optional[_safety.RunBudget] = None) -> Dict[str, Any]:
+              on_event=None, budget: Optional[_safety.RunBudget] = None,
+              allowed_write_ids: Optional[set] = None) -> Dict[str, Any]:
     """
     One bounded run. Returns:
       {"status": complete|partial|escalated|refused, "run_id": ..., "summary": ..., "finding": {...}}
@@ -125,7 +155,8 @@ def run_agent(client, model, question: str, instance: str = "suryodaya",
 
     run_id = run_id or f"{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{instance}-{uuid.uuid4().hex[:6]}"
     budget = budget or _safety.RunBudget()
-    state = _tools.RunState(client, as_of=as_of)
+    state = _tools.RunState(client, as_of=as_of, allowed_write_ids=allowed_write_ids,
+                            allow_writes=apply_writes)
 
     refusal_entity = None
     lowered = question.lower()

@@ -34,3 +34,8 @@ Fields:
 - `script`: an ordered list of tool calls for `harness.fakes.ScriptedModel` to replay in `--offline` mode. Use the string `"STOP"` to signal "give the final answer now" and `"LOOP_FOREVER"` for bounded-run tests. Ignored in `--live` mode (a real model decides what to call).
 - `verifier`: a function name registered in `harness/verifiers_state.py` (state-based) or `harness/verifiers.py` (prose-based, for refusal/data-reread checks carried over from the original harness).
 - `checks`: a one-line human description of what the verifier actually checks, for anyone reading the task file without reading the verifier code.
+- `allow_apply` (offline only): `true` lets `apply_proposal` write in this run (the harness stands in for `--apply` + operator `y`).
+- `allow_write_ids` (offline only): the only `Task` ids a write may touch; anything else is `refused`.
+- `on_read_edits` (offline only): `[{entity, id, set}]` — applied to the stored row on its next `get`, injecting a concurrent edit between read and write.
+- `endpoints` (offline only): `{tool_name: canned_payload}` — canned responses for endpoint tools (e.g. escalation assignees).
+- `fixture_owned` (live only): `true` makes the runner create a dedicated `HARNESS_MARKER` project + future-dated task rows before the run (the only rows a live harness run may write) and delete them in a `finally` block after, pass or fail.

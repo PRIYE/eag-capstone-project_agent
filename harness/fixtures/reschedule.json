@@ -1,0 +1,19 @@
+{
+  "note": "AI-assisted",
+  "as_of": "2026-10-04",
+  "data": {
+    "Project": [
+      {"id": "PR1", "name": "Resched"}
+    ],
+    "Task": [
+      {"id": "T-EDIT", "project_id": "PR1", "status": "todo", "due_date": "2026-10-20", "updated_at": "v1"},
+      {"id": "T-LOCK", "project_id": "PR1", "status": "todo", "due_date": "2026-10-21", "updated_at": "v1", "_locked": true},
+      {"id": "T-RACE", "project_id": "PR1", "status": "todo", "due_date": "2026-10-22", "updated_at": "v1"}
+    ],
+    "Milestone": []
+  },
+  "expected": {
+    "applied_task": "T-EDIT",
+    "applied_due_date": "2026-10-27"
+  }
+}

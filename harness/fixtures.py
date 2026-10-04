@@ -50,3 +50,45 @@ def load_fixture(name: str) -> Dict[str, Any]:
         raise FixtureError(f"Fixture {filename} has invalid note: {note!r}")
 
     return fixture
+
+
+def create_owned_rows(client, marker: str):
+    """T075: create the dedicated live-harness project + one future-dated
+    task (never overdue, so the graded predicates can't see it). Returns
+    (project_id, task_id). Everything created carries `marker` in its
+    name/title for exclusion and cleanup."""
+    from agent import config as _config
+
+    project_name = f"{marker}-reschedule"
+    project_result = client.call_tool("Project.create", {
+        "name": project_name,
+        "status": "active",
+    })
+    if not project_result.success:
+        raise RuntimeError(f"fixture_owned project create failed: {project_result.error}")
+    project = project_result.data.get("data", project_result.data)
+    project_id = project.get("id")
+
+    task_result = client.call_tool("Task.create", {
+        "title": f"{marker}-task",
+        "project_id": project_id,
+        "status": "todo",
+        "due_date": "2027-06-01",
+    })
+    if not task_result.success:
+        raise RuntimeError(f"fixture_owned task create failed: {task_result.error}")
+    task = task_result.data.get("data", task_result.data)
+    return project_id, task.get("id")
+
+
+def delete_owned_rows(client, project_id: str, task_id: str) -> None:
+    """Best-effort cleanup of T075 rows (task first, then project)."""
+    for entity, row_id in (("Task", task_id), ("Project", project_id)):
+        try:
+            client.call_tool(f"{entity}.update", {"id": row_id, "is_active": False})
+        except Exception:
+            pass
+        try:
+            client.call_tool(f"{entity}.delete", {"id": row_id})
+        except Exception:
+            pass

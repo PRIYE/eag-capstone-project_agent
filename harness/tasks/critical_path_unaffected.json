@@ -1,0 +1,16 @@
+{
+  "id": "critical_path_unaffected",
+  "note": "AI-assisted",
+  "instances": ["suryodaya", "keystone"],
+  "mode": "offline_only",
+  "prompt": "If I move task T-D to 2026-10-13, does the project finish move?",
+  "fixture": "critical_path",
+  "script": [
+    {"name": "company_context", "arguments": {}},
+    {"name": "load_snapshot", "arguments": {"scope": "projects"}},
+    {"name": "critical_path_check", "arguments": {"task_id": "T-D", "new_due_date": "2026-10-13"}},
+    "STOP"
+  ],
+  "verifier": "critical_path_matches",
+  "checks": "Off-path move leaves the finish at 2026-10-15 (delta 0, on_path false) and no write occurs."
+}
