@@ -1,0 +1,17 @@
+{
+  "id": "overloaded_next_week_basic",
+  "note": "hand-written",
+  "instances": ["suryodaya", "keystone"],
+  "mode": "offline",
+  "prompt": "Who is overloaded next week?",
+  "fixture": "overload_basic",
+  "script": [
+    {"name": "company_context", "arguments": {}},
+    {"name": "load_snapshot", "arguments": {"scope": "projects"}},
+    {"name": "load_snapshot", "arguments": {"scope": "capacity"}},
+    {"name": "overloaded_next_week", "arguments": {}},
+    "STOP"
+  ],
+  "verifier": "overloaded_matches",
+  "checks": "Overloaded set, capacity_unknown set and per-employee week_excess_h (within 0.01h) all match fixture.expected; the two sets are disjoint."
+}

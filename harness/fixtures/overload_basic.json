@@ -1,0 +1,72 @@
+{
+  "note": "hand-written",
+  "as_of": "2026-10-04",
+  "data": {
+    "Project": [
+      {"id": "P1", "name": "Alpha"},
+      {"id": "P2", "name": "Beta"}
+    ],
+    "Milestone": [],
+    "Task": [
+      {"id": "T-E1", "project_id": "P1"},
+      {"id": "T-E2", "project_id": "P1"},
+      {"id": "T-E3a", "project_id": "P1"},
+      {"id": "T-E3b", "project_id": "P2"},
+      {"id": "T-E4", "project_id": "P1"},
+      {"id": "T-E5", "project_id": "P1"},
+      {"id": "T-E6", "project_id": "P1"},
+      {"id": "T-E7", "project_id": "P1"}
+    ],
+    "ProjectResourceAllocation": [
+      {"id": "A-E1", "employee_id": "E1", "task_id": "T-E1", "calendar_event_id": "EV-E1"},
+
+      {"id": "A-E2-1", "employee_id": "E2", "task_id": "T-E2", "calendar_event_id": "EV-E2-1"},
+      {"id": "A-E2-2", "employee_id": "E2", "task_id": "T-E2", "calendar_event_id": "EV-E2-2"},
+
+      {"id": "A-E3a", "employee_id": "E3", "task_id": "T-E3a", "calendar_event_id": "EV-E3a"},
+      {"id": "A-E3b", "employee_id": "E3", "task_id": "T-E3b", "calendar_event_id": "EV-E3b"},
+
+      {"id": "A-E4", "employee_id": "E4", "task_id": "T-E4", "calendar_event_id": "EV-E4"},
+
+      {"id": "A-E5", "employee_id": "E5", "task_id": "T-E5", "calendar_event_id": "EV-E5"},
+
+      {"id": "A-E6", "employee_id": "E6", "task_id": "T-E6", "calendar_event_id": "EV-E6"},
+
+      {"id": "A-E7", "employee_id": "E7", "task_id": "T-E7", "calendar_event_id": "EV-E7"}
+    ],
+    "CalendarEvent": [
+      {"id": "EV-E1", "start": "2026-10-06", "end": "2026-10-06", "hours": 12},
+
+      {"id": "EV-E2-1", "start": "2026-10-05", "end": "2026-10-05", "hours": 4},
+      {"id": "EV-E2-2", "start": "2026-10-06", "end": "2026-10-06", "hours": 4},
+
+      {"id": "EV-E3a", "start": "2026-10-07", "end": "2026-10-07", "hours": 5},
+      {"id": "EV-E3b", "start": "2026-10-07", "end": "2026-10-07", "hours": 5},
+
+      {"id": "EV-E4", "start": "2026-10-05", "end": "2026-10-05", "hours": 6},
+
+      {"id": "EV-E5", "start": "2026-10-10", "end": "2026-10-10", "hours": 2},
+
+      {"id": "EV-E6", "start": "2026-10-08", "end": "2026-10-09", "hours": 20},
+
+      {"id": "EV-E7", "start": "2027-01-01", "end": "2027-01-01", "hours": 10}
+    ],
+    "ProjectResourceProfile": [
+      {"employee_id": "E1", "monday_hours": 8, "tuesday_hours": 8, "wednesday_hours": 8, "thursday_hours": 8, "friday_hours": 8, "saturday_hours": 0, "sunday_hours": 0},
+      {"employee_id": "E2", "monday_hours": 8, "tuesday_hours": 8, "wednesday_hours": 8, "thursday_hours": 8, "friday_hours": 8, "saturday_hours": 0, "sunday_hours": 0},
+      {"employee_id": "E3", "monday_hours": 8, "tuesday_hours": 8, "wednesday_hours": 8, "thursday_hours": 8, "friday_hours": 8, "saturday_hours": 0, "sunday_hours": 0},
+      {"employee_id": "E5", "monday_hours": 8, "tuesday_hours": 8, "wednesday_hours": 8, "thursday_hours": 8, "friday_hours": 8, "saturday_hours": 0, "sunday_hours": 0},
+      {"employee_id": "E6", "monday_hours": 8, "tuesday_hours": 8, "wednesday_hours": 8, "thursday_hours": 8, "friday_hours": 8, "saturday_hours": 0, "sunday_hours": 0},
+      {"employee_id": "E7", "monday_hours": 8, "tuesday_hours": 8, "wednesday_hours": 8, "thursday_hours": 8, "friday_hours": 8, "saturday_hours": 0, "sunday_hours": 0}
+    ]
+  },
+  "expected": {
+    "overloaded": [
+      {"employee_id": "E1", "week_excess_h": 4.0},
+      {"employee_id": "E3", "week_excess_h": 2.0},
+      {"employee_id": "E5", "week_excess_h": 2.0},
+      {"employee_id": "E6", "week_excess_h": 4.0}
+    ],
+    "capacity_unknown": ["E4"]
+  }
+}

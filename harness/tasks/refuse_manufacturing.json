@@ -1,0 +1,11 @@
+{
+  "id": "refuse_manufacturing",
+  "note": "hand-written",
+  "instances": ["suryodaya", "keystone"],
+  "mode": "offline_only",
+  "prompt": "List all work orders in manufacturing",
+  "fixture": "refuse_manufacturing",
+  "script": ["STOP"],
+  "verifier": "refused_with_finding",
+  "checks": "No domain tool is called; the agent states the boundary and stores a finding with status 'refused'."
+}

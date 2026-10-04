@@ -1,0 +1,41 @@
+{
+  "note": "hand-written",
+  "as_of": "2026-10-04",
+  "data": {
+    "Project": [
+      {"id": "P1", "name": "Alpha"},
+      {"id": "P2", "name": "Beta"},
+      {"id": "P3", "name": "Gamma"},
+      {"id": "P4", "name": "Delta"},
+      {"id": "P5", "name": "Epsilon"},
+      {"id": "P6", "name": "Zeta"},
+      {"id": "P7", "name": "Eta"}
+    ],
+    "Task": [
+      {"id": "T1", "project_id": "P1", "status": "todo", "due_date": "2026-09-01", "assignee_id": "E1"},
+
+      {"id": "T2", "project_id": "P2", "status": "todo", "due_date": "2026-11-01", "assignee_id": "E1"},
+
+      {"id": "PRED3", "project_id": "P3", "status": "in_progress", "due_date": "2026-09-01", "assignee_id": "E1"},
+      {"id": "T3", "project_id": "P3", "status": "todo", "due_date": "2026-11-01",
+       "depends_on_task_id": "PRED3", "assignee_id": "E1"},
+
+      {"id": "PRED4", "project_id": "P4", "status": "cancelled", "due_date": "2026-09-01"},
+      {"id": "T4", "project_id": "P4", "status": "todo", "due_date": "2026-11-01",
+       "depends_on_task_id": "PRED4", "assignee_id": "E1"},
+
+      {"id": "T5", "project_id": "P5", "status": "todo", "due_date": "2026-11-01", "assignee_id": "E1"},
+
+      {"id": "T7a", "project_id": "P7", "status": "todo", "due_date": "2026-09-01", "assignee_id": "E1"}
+    ],
+    "Milestone": [
+      {"id": "M5", "project_id": "P5", "status": "missed", "date": "2026-09-15"},
+      {"id": "M7", "project_id": "P7", "status": "missed", "date": "2026-09-10"}
+    ]
+  },
+  "expected": {
+    "behind_project_ids": ["P1", "P3", "P4", "P5", "P7"],
+    "insufficient_data_project_ids": ["P6"],
+    "expect_truncated": false
+  }
+}
