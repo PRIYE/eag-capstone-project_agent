@@ -1,11 +1,10 @@
 # Team 14 Gap Analysis: AgentSwitch (Projects) vs Nodes & Links
 
 **Team:** 14 (Projects)
+
 **Seat apps:** `projects`, `agent`, `crm`
-**Competitor analyzed:** [Nodes & Links](https://nodeslinks.com/) — "AI Project Expert" for
-complex/construction project scheduling. Used by Balfour Beatty, VINCI, BAM Nuttall,
-Costain, Ferrovial, MTR, Worley and others. Products: Schedule Integrity, Change Control,
-Delay Navigator, QSRA + Risk, EVM & Resources, Portfolio, AI Reporting.
+
+**Competitor analyzed:** [Nodes & Links](https://nodeslinks.com/) — "AI Project Expert" for complex/construction project scheduling. Used by Balfour Beatty, VINCI, BAM Nuttall, Costain, Ferrovial, MTR, Worley and others. Products: Schedule Integrity, Change Control, Delay Navigator, QSRA + Risk, EVM & Resources, Portfolio, AI Reporting.
 
 Grounded against AgentSwitch's real `Project`, `Task`, `Milestone`,
 `ProjectResourceAllocation`, `ProjectResourceProfile`, and `Timesheet` schemas
