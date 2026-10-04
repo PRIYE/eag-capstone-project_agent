@@ -146,7 +146,7 @@ def record_finding(client, run_id: str, finding: Dict[str, Any], snapshot: Optio
         "content": content,
         "category": "fact",
         "source": "system",
-        "importance": "high",
+        "importance": 3,
         "is_active": True,
     })
     if not result.success:

@@ -88,6 +88,9 @@ def cmd_agent(args) -> int:
 
     model = create_model()
 
+    def on_event(event):
+        print(f"EVENT: {event}")
+
     result = run_agent(
         client,
         model,
@@ -95,6 +98,7 @@ def cmd_agent(args) -> int:
         instance=instance,
         apply_writes=args.apply,
         allow_escalate=args.escalate,
+        on_event=on_event,
     )
 
     print("\n" + "=" * 60)

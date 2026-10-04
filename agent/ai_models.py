@@ -76,7 +76,16 @@ class OpenAIModel(AIModel):
         internal conversation_history dicts as-is.
         """
         allowed = {"role", "content", "tool_calls", "tool_call_id", "name"}
-        return [{k: v for k, v in msg.items() if k in allowed} for msg in messages]
+        sanitized = []
+        for msg in messages:
+            clean_msg = {k: v for k, v in msg.items() if k in allowed}
+            if "tool_calls" in clean_msg and clean_msg["tool_calls"]:
+                clean_msg["tool_calls"] = [
+                    {k: v for k, v in tc.items() if not k.startswith("_")}
+                    for tc in clean_msg["tool_calls"]
+                ]
+            sanitized.append(clean_msg)
+        return sanitized
     
     def _make_request(self, endpoint: str, data: Dict, headers: Dict) -> Dict:
         url = f"{self.base_url}{endpoint}"
@@ -246,7 +255,7 @@ class AnthropicModel(AIModel):
 class GoogleModel(AIModel):
     """Google Gemini API client"""
     
-    def __init__(self, api_key: str, model: str = "gemini-1.5-pro"):
+    def __init__(self, api_key: str, model: str = "gemini-2.5-pro"):
         self.api_key = api_key
         self.model = model
         self.base_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}"
@@ -301,7 +310,13 @@ class GoogleModel(AIModel):
                         args = json.loads(func.get("arguments", "{}"))
                     except json.JSONDecodeError:
                         args = {}
-                    parts.append({"functionCall": {"name": func.get("name"), "args": args}})
+                    
+                    if "_raw_part" in tc:
+                        # Just send back the exact part we received!
+                        parts.append(tc["_raw_part"])
+                    else:
+                        fc = {"name": func.get("name"), "args": args}
+                        parts.append({"functionCall": fc})
                 contents.append({"role": "model", "parts": parts})
             
             elif role == "tool":
@@ -311,6 +326,11 @@ class GoogleModel(AIModel):
                     response_payload = json.loads(msg.get("content", "{}"))
                 except json.JSONDecodeError:
                     response_payload = {"result": msg.get("content", "")}
+                
+                # We also need to send back the thought_signature in the functionResponse if it exists?
+                # Actually, Gemini 2.5 expects the thought_signature in the functionResponse? No, the error says "in functionCall parts"
+                # Wait, the error is: "Function call is missing a thought_signature in functionCall parts... function call `default_api:company_context` , position 2"
+                # Position 2 means the second part of the contents array.
                 contents.append({
                     "role": "user",
                     "parts": [{"functionResponse": {"name": name, "response": response_payload}}]
@@ -351,14 +371,25 @@ class GoogleModel(AIModel):
                 text_parts.append(part["text"])
             elif "functionCall" in part:
                 fc = part["functionCall"]
-                tool_calls.append({
+                # Print the raw functionCall from Gemini to see what it contains
+                # print(f"DEBUG raw functionCall: {fc}")
+                tc = {
                     "id": f"gemini_call_{i}",
                     "type": "function",
                     "function": {
                         "name": fc.get("name"),
                         "arguments": json.dumps(fc.get("args", {}))
                     }
-                })
+                }
+                # Grab the thought_signature if it's there
+                # It might be at the part level or inside functionCall
+                # Wait! Gemini 2.5 returns thought in a separate part before the functionCall?
+                # Or maybe it's inside the functionCall? Let's just grab everything that looks like a thought signature.
+                # Actually, the error says: "missing a thought_signature in functionCall parts"
+                # So we need to put it IN the functionCall part when sending it back.
+                # Let's save the whole raw part.
+                tc["_raw_part"] = part
+                tool_calls.append(tc)
         
         message = {"role": "assistant", "content": "\n".join(text_parts) or None}
         if tool_calls:
@@ -367,7 +398,9 @@ class GoogleModel(AIModel):
         return {"choices": [{"message": message}], "_raw_provider_response": raw}
     
     def _make_request(self, endpoint: str, data: Dict) -> Dict:
-        url = f"{self.base_url}{endpoint}"
+        # Gemini 1.5 Pro requires v1beta, but the model name should just be gemini-1.5-pro
+        # We need to ensure we're using the correct format for the URL
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}{endpoint}"
         req = urllib.request.Request(
             url,
             data=json.dumps(data).encode(),
@@ -408,7 +441,7 @@ def create_model() -> AIModel:
         api_key = env.get('GOOGLE_API_KEY')
         if not api_key:
             raise Exception("GOOGLE_API_KEY not found in .env")
-        model_name = env.get('MODEL_NAME', 'gemini-1.5-pro')
+        model_name = env.get('MODEL_NAME', 'gemini-2.5-pro')
         return GoogleModel(api_key, model_name)
     
     else:
