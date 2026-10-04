@@ -67,12 +67,40 @@ delay-cause narrative, no risk simulation, no EVM report, and no portfolio rollu
   LLM rewriting for the intended audience (PM/sponsor/exec) is orchestration, not new
   platform work.
 
-### ❌ Needs platform work (genuinely not buildable with today's schema)
+### Needs platform work (genuinely not buildable with today's schema)
 
 - **Full QSRA / Monte-Carlo risk simulation** — `Task` only has a single
   `depends_on_task_id` (one predecessor, no lag/lead, no multiple-predecessor DAG, no
   duration-distribution fields). A real risk simulation needs a proper precedence
   network with uncertainty ranges per task — that's new schema, not just a smarter agent.
+
+The projects domain has no dependency record beside that one link (`Project`, `Task`,
+`Milestone`, `ProjectResourceAllocation`, `ProjectResourceProfile`, `Timesheet`,
+`ProjectStatusReport`, `ProjectWorkflowPreferences`). Confirmed on the schema snapshot
+in `docs/ENTITY_MAP.md`: `depends_on_task_id` is type `link` to one `Task`. There is
+no lag field and no relationship-type field. Specific cases the agent therefore
+cannot check, because a scan would never see them:
+
+| What a scheduler would store | Example | What AgentSwitch can store |
+|---|---|---|
+| Two predecessors | "Pour concrete" must wait on both "Rebar inspection" and "Formwork sign-off". | One `depends_on_task_id`. Saving the second id replaces the first. A check for "the other predecessor is missing" has no field to read. |
+| Lag or lead | "Start testing 5 days after coding finishes", or "start design 2 days before the review finishes". | No lag/lead number on `Task`. The link does not say how long to wait after the predecessor. |
+| Relationship type | Finish-to-start (B starts when A finishes), start-to-start (B can start when A starts), finish-to-finish (B finishes when A finishes), start-to-finish. | No type field. The only meaning on the record is "this task names that task". |
+
+`parent_task_id` is not a second predecessor. "Draft outline" with parent "Write spec"
+is a breakdown of work. It becomes a schedule link only if `depends_on_task_id` is
+also set, and then it is still one link.
+
+What the same field does allow, and what the agent scan (spec FR-016) does check:
+many tasks may store the same predecessor. If "Rebar inspection", "Formwork
+sign-off", and "Embed placement" all set `depends_on_task_id` to "Excavate", the
+scan can say Excavate holds up three open tasks, and can follow a longer chain
+(Pour concrete waits on Formwork, which waits on Excavate). It can also flag a
+missing id, a link into another project, a loop, a task that depends on its parent
+or its own child, and a successor dated before the task it waits on. Those checks
+read the one link. They do not invent a second predecessor, a lag, or a relationship
+type, and `Task.update` cannot save one either.
+
 - **Baseline snapshots for true "slip vs. baseline"** — there is no
   `baseline_start_date`/`baseline_due_date` on `Task`/`Milestone`. Until then, an agent
   can *approximate* this by writing its own snapshots to `AgentMemory` (private to Team 14)
@@ -115,8 +143,9 @@ reasons about, in one continuous run:
 
 ## Summary
 
-- **Platform gaps to raise:** multi-predecessor scheduling network + duration uncertainty
-  (for real QSRA), baseline snapshots, cross-portfolio aggregation endpoint, answer
+- **Platform gaps to raise:** multi-predecessor scheduling network + lag/lead +
+  relationship type + duration uncertainty (for real QSRA; examples in section 2),
+  baseline snapshots, cross-portfolio aggregation endpoint, answer
   citation/audit plumbing.
 - **Agent opportunities (buildable now):** schedule integrity scanner, critical-path-aware
   change control, EVM proxy from existing budget/timesheet fields, delay-cause narrative,
