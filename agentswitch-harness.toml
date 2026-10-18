@@ -1,0 +1,7 @@
+# AgentSwitch harness runner config (Our harness -> Submit for a run).
+# The agent is stdlib-only, so install has nothing to fetch beyond pip itself.
+install = "pip install -r requirements.txt"
+run     = "python -m harness.runner --platform"
+results = "results.json"
+instances = ["suryodaya", "keystone"]
+timeout_minutes = 30

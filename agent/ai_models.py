@@ -40,10 +40,12 @@ class AIModel(ABC):
 class OpenAIModel(AIModel):
     """OpenAI API client"""
     
-    def __init__(self, api_key: str, model: str = "gpt-4"):
+    def __init__(self, api_key: str, model: str = "gpt-4", base_url: Optional[str] = None):
         self.api_key = api_key
         self.model = model
-        self.base_url = "https://api.openai.com/v1"
+        # OPENAI_BASE_URL lets this talk to any OpenAI-compatible endpoint,
+        # e.g. the AgentSwitch platform model on the harness runner.
+        self.base_url = (base_url or "https://api.openai.com/v1").rstrip("/")
     
     def chat(self, messages: List[Dict[str, str]], tools: Optional[List[Dict]] = None,
              force_tool: Optional[str] = None) -> Dict:
@@ -97,7 +99,7 @@ class OpenAIModel(AIModel):
         )
         
         try:
-            with urllib.request.urlopen(req, timeout=60) as response:
+            with urllib.request.urlopen(req, timeout=120) as response:
                 return json.loads(response.read().decode())
         except urllib.error.HTTPError as e:
             error_body = e.read().decode()
@@ -419,7 +421,15 @@ class GoogleModel(AIModel):
 def create_model() -> AIModel:
     """Create AI model from environment variables"""
     from .mcp_client import load_env
-    
+
+    # Harness-runner path: the platform model (OpenAI-compatible, tool
+    # calls supported) is given in OPENAI_BASE_URL / OPENAI_API_KEY /
+    # OPENAI_MODEL. These process-env values win over .env.
+    if os.environ.get("OPENAI_BASE_URL") and os.environ.get("OPENAI_API_KEY"):
+        return OpenAIModel(os.environ["OPENAI_API_KEY"],
+                           os.environ.get("OPENAI_MODEL", "agentswitch-default"),
+                           base_url=os.environ["OPENAI_BASE_URL"])
+
     env = load_env()
     provider = env.get('MODEL_PROVIDER', 'openai').lower()
     
@@ -428,7 +438,7 @@ def create_model() -> AIModel:
         if not api_key:
             raise Exception("OPENAI_API_KEY not found in .env")
         model_name = env.get('MODEL_NAME', 'gpt-4')
-        return OpenAIModel(api_key, model_name)
+        return OpenAIModel(api_key, model_name, base_url=env.get('OPENAI_BASE_URL') or None)
     
     elif provider == 'anthropic':
         api_key = env.get('ANTHROPIC_API_KEY')

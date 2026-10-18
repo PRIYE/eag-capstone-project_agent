@@ -65,3 +65,7 @@ AgentSwitch_team04-main/
 .cursor/
 .specify/
 .pytest_cache/
+
+# AgentSwitch harness runner output
+results.json
+results.json.tmp

@@ -143,6 +143,33 @@ Your agent must **re-read before acting** and handle changing data gracefully.
 - **Hand-written tests**: 10 points each (AI-generated tests = 0 points)
 - **Real AgentSwitch bugs**: 100 points each
 
+## AgentSwitch harness runner (Our harness → Submit for a run)
+
+The repo root has `agentswitch-harness.toml`, so the platform can run this harness itself:
+
+```toml
+install = "pip install -r requirements.txt"     # stdlib-only agent: nothing to fetch
+run     = "python -m harness.runner --platform"
+results = "results.json"
+instances = ["suryodaya", "keystone"]
+timeout_minutes = 30
+```
+
+In `--platform` mode nothing comes from `.env`. The runner's variables are used instead:
+
+| Variable | Used by |
+|---|---|
+| `AGENTSWITCH_BASE_URL`, `AGENTSWITCH_TOKEN`, `AGENTSWITCH_INSTANCE` | `agent/mcp_client.py::create_client_for` (Bearer seat token, no login) |
+| `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL` | `agent/ai_models.py::create_model` (OpenAI-compatible platform model) |
+
+Each instance run writes `results.json` (`{"tasks": [{id, title, passed, score, evidence}], "summary"}`) with three groups of checks, ids prefixed by the instance. The file is rewritten (atomically) after every check, so a runner timeout still leaves a valid file with everything recorded so far:
+
+1. `platform.*`: MCP initialize with the seat token, Projects tools visible, `TeamHarness.get_mine` returns our saved GitHub link, Payroll is a real 403 (not 404), `Project.list` pages through the full set.
+2. `offline.*`: the full fixture suite in `harness/tasks/` (scripted model, hand-authored `expected` blocks). Runs before the live part because it is fast and deterministic.
+3. `live.*`: the graded request end to end on the platform model (score 1.0 complete, 0.5 partial), then the live-capable tasks (`refuse_payroll`, `refuse_manufacturing`, `behind_schedule_basic`, `overloaded_next_week_basic`). Live runs are read-only and time-boxed by `HARNESS_LIVE_BUDGET_S` (default 720 s per instance); a task that would not fit is recorded as failed with "skipped".
+
+To run it yourself, export the same six variables (seat token from your normal login, any OpenAI-compatible model) and run `python -m harness.runner --platform`. Without `--platform`, `python -m harness.runner` / `run.py test` behave exactly as before.
+
 ## Commands
 
 ```bash

@@ -1,0 +1,4 @@
+# Runtime dependencies for the AgentSwitch harness runner (Python 3.11).
+# The agent and harness use only the Python standard library (urllib for
+# MCP and the OpenAI-compatible platform model), so nothing is required here.
+# Dev/test tooling lives in requirements-dev.txt.

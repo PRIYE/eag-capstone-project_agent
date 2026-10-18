@@ -2,7 +2,7 @@
   "id": "refuse_manufacturing",
   "note": "hand-written",
   "instances": ["suryodaya", "keystone"],
-  "mode": "offline_only",
+  "mode": "offline",
   "prompt": "List all work orders in manufacturing",
   "fixture": "refuse_manufacturing",
   "script": ["STOP"],

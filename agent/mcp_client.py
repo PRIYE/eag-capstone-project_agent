@@ -40,11 +40,14 @@ class MCPResult:
 class AgentSwitchClient:
     """MCP client for AgentSwitch platform"""
     
-    def __init__(self, base_url: str, email: str, password: str):
+    def __init__(self, base_url: str, email: str = "", password: str = "",
+                 token: Optional[str] = None):
         self.base_url = base_url.rstrip('/')
         self.email = email
         self.password = password
-        self.token: Optional[str] = None
+        # A pre-issued seat token (the AgentSwitch harness runner gives one
+        # in AGENTSWITCH_TOKEN) skips the email/password login entirely.
+        self.token: Optional[str] = token
         self.initialized = False
         self.request_id = 0
         
@@ -345,6 +348,29 @@ def load_env() -> Dict[str, str]:
     return env_vars
 
 
+def runner_env() -> Optional[Dict[str, str]]:
+    """
+    The AgentSwitch harness runner ("Our harness -> Submit for a run")
+    injects AGENTSWITCH_BASE_URL / AGENTSWITCH_TOKEN / AGENTSWITCH_INSTANCE.
+    Returns them when both URL and token are set, else None (local .env
+    login is used instead). No passwords, no .env on the runner.
+    """
+    base = os.environ.get("AGENTSWITCH_BASE_URL", "").strip()
+    token = os.environ.get("AGENTSWITCH_TOKEN", "").strip()
+    if not base or not token:
+        return None
+    return {"base_url": base, "token": token,
+            "instance": os.environ.get("AGENTSWITCH_INSTANCE", "").strip()}
+
+
+def create_client_from_token(base_url: str, token: str) -> AgentSwitchClient:
+    client = AgentSwitchClient(base_url, token=token)
+    init_result = client.initialize()
+    if not init_result.success:
+        raise Exception(f"Failed to initialize MCP at {base_url}: {init_result.error}")
+    return client
+
+
 def create_client_for(instance: str) -> AgentSwitchClient:
     """
     Build and authenticate a client for a named instance ('suryodaya' or
@@ -354,6 +380,11 @@ def create_client_for(instance: str) -> AgentSwitchClient:
     tenant-specific (currency, country) itself.
     """
     from . import config as _config  # local import avoids a cycle at module load
+
+    # Harness-runner path: seat token + instance URL from the environment.
+    renv = runner_env()
+    if renv and (not renv["instance"] or renv["instance"] == instance):
+        return create_client_from_token(renv["base_url"], renv["token"])
 
     creds = _config.credentials(instance)
     client = AgentSwitchClient(creds["url"], creds["email"], creds["password"])
