@@ -26,7 +26,7 @@ from .domain.types import Snapshot
 # the boundary.
 _PAYROLL = ["PayRun", "SalaryRevision", "SalaryComponent"]
 _MANUFACTURING = ["WorkOrder", "BOM", "ProductionPlan"]
-_ACCOUNTING = ["JournalEntry", "GLEntry", "Invoice"]
+_ACCOUNTING = ["GLEntry", "JournalEntry", "Invoice"]
 FORBIDDEN_KEYWORDS = {
     "payroll": _PAYROLL, "salary": _PAYROLL, "salaries": _PAYROLL,
     "payslip": _PAYROLL, "compensation": _PAYROLL,
@@ -167,25 +167,41 @@ def run_agent(client, model, question: str, instance: str = "suryodaya",
     state = _tools.RunState(client, as_of=as_of, allowed_write_ids=allowed_write_ids,
                             allow_writes=apply_writes)
 
+    # Refusal gate. A keyword in FORBIDDEN_KEYWORDS is out of scope BY
+    # DESIGN, so we refuse on a confirmed 403 (not_visible) AND on an
+    # inconclusive probe (unknown_name: 404 or no answer). Only a probe that
+    # shows the entity IS visible to this seat lets the model continue.
+    # 403 and 404 stay distinct in the trace and the finding (Principle III).
     refusal_entity = None
+    refusal_probe: Dict[str, Any] = {}
     lowered = question.lower()
     for keyword, candidates in FORBIDDEN_KEYWORDS.items():
         if keyword in lowered:
             probe = _safety.probe_domain(client, candidates)
             emit({"event": "boundary_probe", "keyword": keyword, "probe": probe})
-            if probe["status"] == "not_visible":
+            if probe["status"] in ("not_visible", "unknown_name"):
                 refusal_entity = probe.get("entity") or candidates[0]
-                state.not_visible.append(refusal_entity)
+                refusal_probe = probe
+                if probe["status"] == "not_visible":
+                    state.not_visible.append(refusal_entity)
             break
 
     if refusal_entity:
         finding = _build_finding_from_state(state, run_id, instance, status="refused")
+        if refusal_probe.get("status") == "unknown_name":
+            note = (f"refused by seat scope: probe of {refusal_entity} was inconclusive "
+                    f"(http_status={refusal_probe.get('http_status')}), not a confirmed 403")
+            finding.setdefault("limits", {}).setdefault("notes", []).append(note)
         try:
             _findings.record_finding(client, run_id, finding, state.snapshot)
         except Exception as e:
             emit({"event": "record_finding_failed", "error": str(e)})
-        summary = (f"That is outside the Projects seat's scope ({refusal_entity} is not visible to this "
-                   f"seat). I cannot answer that request.")
+        if refusal_probe.get("status") == "not_visible":
+            summary = (f"That is outside the Projects seat's scope ({refusal_entity} is not visible to this "
+                       f"seat). I cannot answer that request.")
+        else:
+            summary = ("That is outside the Projects seat's scope (payroll, manufacturing and accounting "
+                       "belong to other seats). I cannot answer that request.")
         emit({"event": "refused", "entity": refusal_entity})
         return {"status": "refused", "run_id": run_id, "summary": summary, "finding": finding}
 

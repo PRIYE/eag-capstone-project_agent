@@ -69,3 +69,4 @@ AgentSwitch_team04-main/
 # AgentSwitch harness runner output
 results.json
 results.json.tmp
+results-*.json
