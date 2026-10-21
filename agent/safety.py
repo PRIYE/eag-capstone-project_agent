@@ -149,6 +149,20 @@ def probe_capability(client, entity: str, op: str) -> Dict[str, Any]:
     return {"visible": False, "status": "unknown_name", "http_status": status}
 
 
+def probe_domain(client, entities: List[str], op: str = "list") -> Dict[str, Any]:
+    """Probe several real entities of one out-of-seat domain. Returns the
+    first `not_visible` (403) probe, tagged with its entity; otherwise the
+    last probe seen. Never turns a 404 into a 403."""
+    last: Dict[str, Any] = {"visible": False, "status": "unknown_name"}
+    for entity in entities:
+        probe = dict(probe_capability(client, entity, op))
+        probe["entity"] = entity
+        if probe.get("status") == "not_visible":
+            return probe
+        last = probe
+    return last
+
+
 # ---------------------------------------------------------------------------
 # Re-read-before-write (Constitution Principle II, NON-NEGOTIABLE)
 # ---------------------------------------------------------------------------

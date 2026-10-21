@@ -2,6 +2,10 @@
   "note": "hand-written",
   "as_of": "2026-10-04",
   "data": {},
-  "entity_statuses": {"Payroll": 403},
+  "entity_statuses": {
+    "PayRun": 403,
+    "SalaryRevision": 403,
+    "SalaryComponent": 403
+  },
   "expected": {}
 }

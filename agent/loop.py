@@ -19,10 +19,19 @@ from . import safety as _safety
 from . import tools as _tools
 from .domain.types import Snapshot
 
+# Keyword -> real platform entities to probe (docs/ENTITY_MAP.raw.json).
+# There is no entity literally named "Payroll" or "LedgerEntry" - probing
+# those returns 404 (unknown_name), which is NOT the seat boundary. Probe
+# real entities of the out-of-seat domain instead; the first 403 confirms
+# the boundary.
+_PAYROLL = ["PayRun", "SalaryRevision", "SalaryComponent"]
+_MANUFACTURING = ["WorkOrder", "BOM", "ProductionPlan"]
+_ACCOUNTING = ["JournalEntry", "GLEntry", "Invoice"]
 FORBIDDEN_KEYWORDS = {
-    "payroll": "Payroll", "salary": "Payroll", "salaries": "Payroll",
-    "manufacturing": "WorkOrder", "work order": "WorkOrder", "work orders": "WorkOrder",
-    "accounting": "LedgerEntry",
+    "payroll": _PAYROLL, "salary": _PAYROLL, "salaries": _PAYROLL,
+    "payslip": _PAYROLL, "compensation": _PAYROLL,
+    "manufacturing": _MANUFACTURING, "work order": _MANUFACTURING, "work orders": _MANUFACTURING,
+    "accounting": _ACCOUNTING, "ledger": _ACCOUNTING,
 }
 
 SYSTEM_PROMPT = """You are the agent for the Projects seat on AgentSwitch.
@@ -160,11 +169,13 @@ def run_agent(client, model, question: str, instance: str = "suryodaya",
 
     refusal_entity = None
     lowered = question.lower()
-    for keyword, entity in FORBIDDEN_KEYWORDS.items():
+    for keyword, candidates in FORBIDDEN_KEYWORDS.items():
         if keyword in lowered:
-            probe = _safety.probe_capability(client, entity, "list")
+            probe = _safety.probe_domain(client, candidates)
+            emit({"event": "boundary_probe", "keyword": keyword, "probe": probe})
             if probe["status"] == "not_visible":
-                refusal_entity = entity
+                refusal_entity = probe.get("entity") or candidates[0]
+                state.not_visible.append(refusal_entity)
             break
 
     if refusal_entity:

@@ -40,3 +40,14 @@ def test_wrong_op_name_on_visible_entity_returns_real_operation_set():
     assert "update" in result["operations"]
     assert "list" in result["operations"]
     assert "updat" not in result["operations"]
+
+
+def test_payroll_boundary_probes_real_entities_not_the_word_payroll():
+    # Live regression (2026-10-21): "/api/Payroll" is a 404 because no entity
+    # is named Payroll; the boundary must come from a real payroll entity.
+    from agent.loop import FORBIDDEN_KEYWORDS
+    from agent.safety import probe_domain
+    mcp = FakeMcp({}, entity_statuses={"Payroll": 404, "PayRun": 403})
+    probe = probe_domain(mcp, FORBIDDEN_KEYWORDS["salary"])
+    assert probe["status"] == "not_visible"
+    assert probe["entity"] == "PayRun"

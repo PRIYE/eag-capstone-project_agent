@@ -323,7 +323,8 @@ def _platform_checks(res: _Results, instance: str):
 
     # Seat boundary is a real 403, not a 404 (Constitution Principle III).
     try:
-        probe = _safety.probe_capability(client, "Payroll", "list")
+        from agent.loop import FORBIDDEN_KEYWORDS as _FK
+        probe = _safety.probe_domain(client, _FK["payroll"])
         res.record("platform.payroll_boundary", "Payroll is outside this seat (403, not 404)",
                    probe.get("status") == "not_visible", probe)
     except Exception as e:  # noqa: BLE001
